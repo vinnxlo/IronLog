@@ -693,20 +693,45 @@ function discardWorkout() {
   });
 }
 
-function finishWorkout() {
+async function finishWorkout() {
   if (!db.activeWorkout) return;
+  
   const dur = Math.round((Date.now() - db.activeWorkout.startTime) / 60000);
   let vol = 0;
   db.activeWorkout.exercises.forEach(ex => {
-    if (ex.type === 'strength') ex.sets.forEach(s => { if (s.weight && s.reps) vol += parseFloat(s.weight) * parseInt(s.reps); });
+    if (ex.type === 'strength') ex.sets.forEach(s => { 
+      if (s.weight && s.reps) vol += parseFloat(s.weight) * parseInt(s.reps); 
+    });
   });
-  const workout = { ...db.activeWorkout, duration: dur, volume: vol, endTime: Date.now() };
-  db.workouts.push(workout);
+
+  const workout = { 
+    id: db.activeWorkout.id,
+    name: db.activeWorkout.name,
+    start_time: db.activeWorkout.startTime,
+    end_time: Date.now(),
+    duration: dur, 
+    volume: vol, 
+    exercises: db.activeWorkout.exercises 
+  };
+
+  // 1. Save to local storage for instant offline access
+  db.workouts.push({ ...db.activeWorkout, duration: dur, volume: vol, endTime: Date.now() });
   db.activeWorkout = null;
-  save(); stopTimer();
-  renderLog(); renderHome();
-  showToast('Workout saved! 💪');
-  updatePRs(workout);
+  save(); 
+  stopTimer();
+
+  // 2. Sync to Supabase Database
+  try {
+    const { data, error } = await supabase.from('workouts').insert([workout]);
+    if (error) console.error('Supabase Sync Error:', error);
+    else console.log('Successfully synced to Supabase!');
+  } catch (err) {
+    console.error('Network Error:', err);
+  }
+
+  renderLog(); 
+  renderHome();
+  showToast('Workout saved & synced! 💪');
 }
 
 function updatePRs(workout) {
