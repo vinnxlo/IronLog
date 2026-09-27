@@ -150,7 +150,7 @@
   .btn-start:active { transform: scale(0.97); }
 
   /* FORM ELEMENTS */
-  input[type=text], input[type=number], select, textarea {
+  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
     width: 100%; padding: 11px 14px;
     background: var(--bg3); border: 1px solid var(--border2);
     border-radius: 8px; color: var(--text);
@@ -158,7 +158,7 @@
     outline: none; transition: border-color 0.15s;
     -webkit-appearance: none; appearance: none;
   }
-  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
   select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a09a90' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
   select option { background: var(--bg3); }
   label { font-size: 12px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 6px; }
@@ -430,6 +430,7 @@
     <div class="streak-badge" id="streak-badge" onclick="switchTab('history', document.querySelectorAll('.nav-btn')[3])" style="cursor:pointer">
       <span>🔥</span><span id="streak-num">0</span><span style="font-size:11px;font-weight:400;color:var(--text2)">day streak</span>
     </div>
+    <button class="btn btn-xs btn-secondary" id="logout-btn" onclick="logout()" title="Log out" aria-label="Log out" style="display:none">↪</button>
   </header>
 
   <!-- MAIN CONTENT -->
@@ -782,6 +783,27 @@
   </div>
 </div>
 
+<!-- AUTH MODAL -->
+<div class="modal-overlay show" id="auth-modal" style="z-index:500">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Account Login</div>
+    <div class="form-group">
+      <label for="auth-email">Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="auth-password">Password</label>
+      <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+    </div>
+    <div id="auth-message" role="alert" style="display:none;color:var(--danger);font-size:13px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="handleAuth('login')">Log In</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="handleAuth('signup')">Sign Up</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast">Saved!</div>
 
 <!-- Supabase JS Client v2 -->
@@ -872,58 +894,122 @@ const MUSCLE_MAP = {
   'Russian Twists': ['Core'], 'Leg Raises': ['Core'],
 };
 
-let db = { workouts: [], activeWorkout: null };
+let db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
 let timerInterval = null;
 let currentExType = 'strength';
+let currentUser = null;
+let authReady = false;
 
-function save() { try { localStorage.setItem('ironlog', JSON.stringify(db)); } catch(e){} }
-function load() {
-  try {
-    const raw = localStorage.getItem('ironlog');
-    if (raw) db = JSON.parse(raw);
-  } catch(e) {}
+function userStorageKey(userId) { return `ironlog_user_${userId}`; }
+function save() {
+  if (!currentUser) return;
+  try { localStorage.setItem(userStorageKey(currentUser.id), JSON.stringify(db)); } catch(e){}
 }
 
-async function migrateLocalDataToCloud() {
-  if (localStorage.getItem('ironlog_migrated')) return;
+function showAuthMessage(message) {
+  const element = document.getElementById('auth-message');
+  element.textContent = message || '';
+  element.style.display = message ? 'block' : 'none';
+}
 
-  try {
-    const rawData = localStorage.getItem('ironlog');
-    if (!rawData) return;
+function renderAccountControls() {
+  const button = document.getElementById('logout-btn');
+  button.style.display = currentUser ? 'inline-flex' : 'none';
+  button.title = currentUser ? `Log out ${currentUser.email || ''}` : 'Log out';
+}
 
-    const localDb = JSON.parse(rawData);
-    const localWorkouts = Array.isArray(localDb.workouts) ? localDb.workouts : [];
-    if (!localWorkouts.length) {
-      localStorage.setItem('ironlog_migrated', 'true');
-      return;
-    }
+async function applyAuthSession(user) {
+  if (authReady && currentUser?.id === user?.id) return;
+  currentUser = user || null;
 
-    const client = getSupabaseClient();
-    if (!client) return;
-
-    const formattedWorkouts = localWorkouts.map(workout => ({
-      id: workout.id || String(workout.startTime),
-      name: workout.name,
-      start_time: workout.startTime,
-      end_time: workout.endTime || workout.startTime,
-      duration: workout.duration || 0,
-      volume: workout.volume || 0,
-      exercises: workout.exercises || []
-    }));
-
-    const { error } = await client
-      .from('workouts')
-      .upsert(formattedWorkouts, { onConflict: 'id' });
-    if (error) throw error;
-
-    localStorage.setItem('ironlog_migrated', 'true');
-    showToast('Local history synced to cloud');
-  } catch (error) {
-    console.error('Local workout migration failed:', error);
+  if (!currentUser) {
+    authReady = true;
+    db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
+    stopTimer();
+    renderAccountControls();
+    renderHome();
+    renderHistory();
+    renderLog();
+    showAuthMessage('');
+    openModal('auth-modal');
+    return;
   }
+
+  db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
+  try {
+    const raw = localStorage.getItem(userStorageKey(currentUser.id));
+    if (raw) db = { ...db, ...JSON.parse(raw) };
+  } catch (error) {
+    console.error('Could not load account data:', error);
+  }
+  if (!Array.isArray(db.workouts)) db.workouts = [];
+  if (!Array.isArray(db.plans)) db.plans = [];
+  if (!db.prs || typeof db.prs !== 'object') db.prs = {};
+
+  authReady = true;
+  seedBTSPlan();
+  renderAccountControls();
+  closeModal('auth-modal');
+  renderHome();
+  renderHistory();
+  renderLog();
+  renderPlans();
+  await fetchWorkoutsFromCloud();
+}
+
+async function initAuth() {
+  const client = getSupabaseClient();
+  if (!client) {
+    showAuthMessage('Unable to connect to the authentication service. Please refresh and try again.');
+    return;
+  }
+
+  client.auth.onAuthStateChange((event, session) => {
+    setTimeout(() => applyAuthSession(session?.user || null), 0);
+  });
+  const { data, error } = await client.auth.getSession();
+  if (error) {
+    showAuthMessage(error.message);
+    return;
+  }
+  await applyAuthSession(data.session?.user || null);
+}
+
+async function handleAuth(type) {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if (!email || !password) {
+    showAuthMessage('Please enter email and password.');
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) return showAuthMessage('Authentication is unavailable. Please try again later.');
+  showAuthMessage('');
+  const result = type === 'signup'
+    ? await client.auth.signUp({ email, password })
+    : await client.auth.signInWithPassword({ email, password });
+  if (result.error) {
+    showAuthMessage(result.error.message);
+    return;
+  }
+  if (type === 'signup' && !result.data.session) {
+    showAuthMessage('Account created. Check your email to confirm your account, then log in.');
+    return;
+  }
+  showToast(type === 'signup' ? 'Account created' : 'Logged in');
+}
+
+async function logout() {
+  const client = getSupabaseClient();
+  if (!client) return;
+  const { error } = await client.auth.signOut();
+  if (error) showToast(`Logout failed: ${error.message}`);
 }
 
 async function fetchWorkoutsFromCloud() {
+  if (!currentUser) return;
+  const userId = currentUser.id;
   try {
     const client = getSupabaseClient();
     if (!client) return;
@@ -931,15 +1017,12 @@ async function fetchWorkoutsFromCloud() {
     const { data, error } = await client
       .from('workouts')
       .select('*')
+      .eq('user_id', userId)
       .order('start_time', { ascending: true });
     if (error) throw error;
-    if (!data?.length) return;
+    if (currentUser?.id !== userId) return;
 
-    const mergedWorkouts = new Map(
-      (db.workouts || []).map(workout => [String(workout.id), workout])
-    );
-    data.forEach(workout => {
-      mergedWorkouts.set(String(workout.id), {
+    db.workouts = (data || []).map(workout => ({
         id: workout.id,
         name: workout.name,
         startTime: workout.start_time,
@@ -947,10 +1030,7 @@ async function fetchWorkoutsFromCloud() {
         duration: workout.duration,
         volume: workout.volume,
         exercises: workout.exercises || []
-      });
-    });
-
-    db.workouts = Array.from(mergedWorkouts.values());
+    }));
     save();
     renderHome();
     renderHistory();
@@ -960,7 +1040,6 @@ async function fetchWorkoutsFromCloud() {
 }
 
 async function syncWorkoutsWithCloud() {
-  await migrateLocalDataToCloud();
   await fetchWorkoutsFromCloud();
 }
 
@@ -1142,7 +1221,7 @@ function discardWorkout() {
 }
 
 async function finishWorkout() {
-  if (!db.activeWorkout) return;
+  if (!db.activeWorkout || !currentUser) return;
   const dur = Math.round((Date.now() - db.activeWorkout.startTime) / 60000);
   let vol = 0;
   db.activeWorkout.exercises.forEach(ex => {
@@ -1152,6 +1231,7 @@ async function finishWorkout() {
   const workout = { ...db.activeWorkout, duration: dur, volume: vol, endTime };
   const workoutForSync = {
     id: db.activeWorkout.id,
+    user_id: currentUser.id,
     name: db.activeWorkout.name,
     start_time: db.activeWorkout.startTime,
     end_time: endTime,
@@ -1431,6 +1511,15 @@ function clearHistory() {
     db.workouts = []; db.prs = {};
     save(); renderHistory(); renderHome();
     showToast('History cleared');
+    const client = getSupabaseClient();
+    if (client && currentUser) {
+      client.from('workouts').delete().eq('user_id', currentUser.id).then(({ error }) => {
+        if (error) {
+          console.error('Cloud history delete failed:', error.message);
+          showToast('Local history cleared; cloud delete failed');
+        }
+      });
+    }
   });
 }
 
@@ -1475,6 +1564,15 @@ function deleteWorkout(id) {
   showConfirm('Delete Workout?', 'This workout will be permanently removed from your history.', () => {
     db.workouts = db.workouts.filter(w => w.id !== id);
     save(); closeModal('detail-modal'); renderHistory();
+    const client = getSupabaseClient();
+    if (client && currentUser) {
+      client.from('workouts').delete().eq('id', id).eq('user_id', currentUser.id).then(({ error }) => {
+        if (error) {
+          console.error('Cloud workout delete failed:', error.message);
+          showToast('Workout removed locally; cloud delete failed');
+        }
+      });
+    }
   });
 }
 
@@ -2358,7 +2456,9 @@ function openPlanFromHome(planId) {
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+  m.addEventListener('click', e => {
+    if (e.target === m && m.id !== 'auth-modal') m.classList.remove('show');
+  });
 });
 
 // ── BTS PLAN SEEDING ──────────────────────────────────────────────────
@@ -2453,12 +2553,11 @@ function seedBTSPlan() {
 }
 
 // INIT
-load();
-seedBTSPlan();
 renderHome();
-if (db.activeWorkout && document.getElementById('sec-log').classList.contains('active')) renderLog();
+renderHistory();
+renderLog();
 updateExSelect();
-syncWorkoutsWithCloud();
+initAuth();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
