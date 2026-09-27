@@ -416,7 +416,10 @@
 <!-- Mobile Debugging Console -->
 <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
 <script>
-  window.addEventListener('load', () => { new window.VConsole(); });
+  const VCONSOLE_ENABLED = 0;
+  window.addEventListener('load', () => {
+    if (VCONSOLE_ENABLED === 1) new window.VConsole();
+  });
 </script>
 </head>
 <body>
