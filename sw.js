@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fortis-pwa-v1';
+const CACHE_NAME = 'fortis-pwa-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,6 +34,19 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event - Stale-While-Revalidate Caching Strategy
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
