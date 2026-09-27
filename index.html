@@ -556,13 +556,15 @@
 
 <script>
 // Paste your Project URL here
-const SUPABASE_URL = 'https://jtgcltjqrxdkjxkigwtv.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://jtgcltjqrxdkjxkigwtv.supabase.co';
 
 // Paste your Publishable Key here (starts with sb_p_... or eyJ...)
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mM78tJB5xfjET5JTphGhxQ_L6BvXAiu';
 
 // Initialize the Supabase client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = window.supabase?.createClient
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+  : null;
 
 const STRENGTH_EXERCISES = ['Bench Press', 'Incline Bench Press', 'Overhead Press', 'Lateral Raises', 'Bicep Curls', 'Tricep Dips', 'Pull-ups', 'Barbell Rows', 'Lat Pulldown', 'Squat', 'Leg Press', 'Romanian Deadlift', 'Deadlift', 'Calf Raises', 'Plank', 'Crunches'];
 const CARDIO_EXERCISES = ['Running', 'Treadmill Run', 'Cycling', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Swimming', 'Walking'];
@@ -721,12 +723,14 @@ async function finishWorkout() {
   stopTimer();
 
   // 2. Sync to Supabase Database
-  try {
-    const { data, error } = await supabase.from('workouts').insert([workout]);
-    if (error) console.error('Supabase Sync Error:', error);
-    else console.log('Successfully synced to Supabase!');
-  } catch (err) {
-    console.error('Network Error:', err);
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient.from('workouts').insert([workout]);
+      if (error) console.error('Supabase Sync Error:', error);
+      else console.log('Successfully synced to Supabase!');
+    } catch (err) {
+      console.error('Network Error:', err);
+    }
   }
 
   renderLog(); 
