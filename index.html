@@ -2292,12 +2292,15 @@ function renderPlans() {
   if (!db.plans) db.plans = [];
   if (plansState.view === 'list') renderPlanList();
   else if (plansState.view === 'plan') renderPlanDetail();
+  else if (plansState.view === 'workout') renderPlanWorkoutDetail();
 }
 
 function renderPlanList() {
   document.getElementById('plans-breadcrumb').textContent = 'My Plans';
-  document.getElementById('plans-add-btn').textContent = '+ New Plan';
-  document.getElementById('plans-add-btn').onclick = plansAddAction;
+  const addButton = document.getElementById('plans-add-btn');
+  addButton.textContent = '+ New Plan';
+  addButton.onclick = plansAddAction;
+  addButton.style.display = '';
 
   const v = document.getElementById('plans-view');
   if (!db.plans.length) {
@@ -2332,67 +2335,108 @@ function renderPlanDetail() {
   if (!plan) { plansState.view = 'list'; renderPlans(); return; }
   document.getElementById('plans-breadcrumb').innerHTML =
     `<span style="color:var(--text3);cursor:pointer;font-size:16px;font-weight:400" onclick="goToPlanList()">Plans</span>
-     <span style="color:var(--text3);margin:0 6px">›</span>${plan.name}
+     <span style="color:var(--text3);margin:0 6px">›</span>${escapeHtml(plan.name)}
      <button class="btn btn-xs btn-secondary" style="margin-left:8px;font-size:11px;padding:3px 8px;vertical-align:middle" onclick="openRenamePlan('${plan.id}')">✎</button>`;
   document.getElementById('plans-add-btn').textContent = '+ Workout';
   document.getElementById('plans-add-btn').onclick = () => openPlanWorkoutModal(null);
+  document.getElementById('plans-add-btn').style.display = '';
 
   const v = document.getElementById('plans-view');
   if (!(plan.workouts||[]).length) {
     v.innerHTML = `<div class="empty-state">
       <div class="empty-icon">💪</div>
       <div class="empty-title">No Workouts</div>
-      <div class="empty-sub">Add workouts to this plan with your exercise selection, order and rep targets.</div>
+      <div class="empty-sub">Add workouts to this plan, then view each workout's exercise selection and targets.</div>
     </div>`;
     return;
   }
   v.innerHTML = plan.workouts.map(wk => {
-    const exList = (wk.exercises||[]);
+    const exNames = (wk.exercises||[]).map(ex => ex.name);
+    const summary = exNames.length
+      ? `${exNames.slice(0, 3).map(escapeHtml).join(', ')}${exNames.length > 3 ? '…' : ''}`
+      : 'No exercises yet';
     return `<div class="plan-workout-row">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="plan-workout-name">${wk.name}</div>
-        <div style="display:flex;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="min-width:0">
+          <div class="plan-workout-name">${escapeHtml(wk.name)}</div>
+          <div style="font-size:12px;color:var(--text3)">${summary}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-xs btn-secondary" onclick="viewPlanWorkout('${plan.id}','${wk.id}')">View</button>
           <button class="btn btn-xs btn-success" onclick="startPlanWorkout('${plan.id}','${wk.id}')">▶ Start</button>
           <button class="btn btn-xs btn-secondary" onclick="openPlanWorkoutModal('${wk.id}')">Edit</button>
           <button class="btn btn-xs btn-danger" onclick="deletePlanWorkout('${plan.id}','${wk.id}')">✕</button>
         </div>
       </div>
-      ${exList.length ? exList.map((ex, i) => {
-        const oneRM = getLatest1RM(ex.name);
-        const setsHtml = (ex.type === 'strength' && ex.setConfigs) ? ex.setConfigs.map((sc, si) => {
-          const isPct = sc.mode === 'pct';
-          const estWeight = isPct && oneRM ? weightFromPct(oneRM, sc.pct1rm) : null;
-          const configText = isPct
-            ? sc.pct1rm + '% 1RM × ' + sc.reps + ' reps'
-            : (sc.weight ? sc.weight + ' kg × ' : '') + sc.reps + ' reps';
-          return `<div class="plan-set-detail">
-            <span class="psd-num">Set ${si+1}</span>
-            <span class="psd-config">${configText}</span>
-            ${estWeight ? `<span class="psd-est">${estWeight} kg</span>` : ''}
-          </div>`;
-        }).join('') : '';
-
-        const warmupHtml = (ex.type === 'strength' && (ex.warmupSets || 0) > 0)
-          ? `<div class="plan-set-detail" style="opacity:0.55">
-              <span class="psd-num" style="color:var(--info)">W/U</span>
-              <span class="psd-config">${ex.warmupSets} warm-up set${ex.warmupSets > 1 ? 's' : ''} — ~60% working weight</span>
-            </div>` : '';
-
-        return `<div class="plan-ex-row">
-          <div class="plan-ex-num">${i+1}</div>
-          <div class="plan-ex-name">${escapeHtml(ex.name)}<div style="font-size:10px;color:var(--text3);font-weight:400">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</div></div>
-          <div class="plan-ex-detail">${ex.type === 'cardio'
-            ? (ex.duration ? ex.duration + ' min' : 'Cardio')
-            : (ex.setConfigs ? (ex.warmupSets ? '1W + ' : '') + ex.setConfigs.length + ' sets' : '')
-          }</div>
-          ${oneRM ? `<div style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">1RM ${oneRM}kg</div>` : ''}
-        </div>
-        ${warmupHtml}
-        ${setsHtml}
-        ${ex.notes ? `<div style="margin:4px 0 8px;font-size:11px;color:var(--text3);padding:6px 8px;background:var(--bg4);border-radius:6px;line-height:1.5">📝 ${ex.notes}</div>` : ''}`;
-      }).join('')
-      : `<div style="font-size:12px;color:var(--text3)">No exercises — tap Edit to add some.</div>`}
     </div>`;
+  }).join('');
+}
+
+function renderPlanWorkoutDetail() {
+  const plan = db.plans.find(p => p.id === plansState.planId);
+  const workout = plan && (plan.workouts||[]).find(wk => wk.id === plansState.workoutId);
+  if (!plan || !workout) {
+    plansState.view = plan ? 'plan' : 'list';
+    renderPlans();
+    return;
+  }
+
+  document.getElementById('plans-breadcrumb').innerHTML =
+    `<span style="color:var(--text3);cursor:pointer;font-size:16px;font-weight:400" onclick="goToPlanList()">Plans</span>
+     <span style="color:var(--text3);margin:0 6px">›</span>
+     <span style="color:var(--text3);cursor:pointer;font-size:16px;font-weight:400" onclick="goToPlanDetail()">${escapeHtml(plan.name)}</span>
+     <span style="color:var(--text3);margin:0 6px">›</span>${escapeHtml(workout.name)}`;
+  const addButton = document.getElementById('plans-add-btn');
+  addButton.textContent = 'Edit Workout';
+  addButton.onclick = () => openPlanWorkoutModal(workout.id);
+  addButton.style.display = '';
+
+  document.getElementById('plans-view').innerHTML = `
+    <div class="plan-workout-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="plan-workout-name">${escapeHtml(workout.name)}</div>
+        <button class="btn btn-xs btn-success" onclick="startPlanWorkout('${plan.id}','${workout.id}')">▶ Start</button>
+      </div>
+      ${renderPlanWorkoutExercises(workout)}
+    </div>`;
+}
+
+function renderPlanWorkoutExercises(workout) {
+  const exercises = workout.exercises || [];
+  if (!exercises.length) return `<div style="font-size:12px;color:var(--text3)">No exercises — tap Edit Workout to add some.</div>`;
+  return exercises.map((ex, i) => {
+    const oneRM = getLatest1RM(ex.name);
+    const setsHtml = (ex.type === 'strength' && ex.setConfigs) ? ex.setConfigs.map((sc, si) => {
+      const isPct = sc.mode === 'pct';
+      const estWeight = isPct && oneRM ? weightFromPct(oneRM, sc.pct1rm) : null;
+      const configText = isPct
+        ? sc.pct1rm + '% 1RM × ' + sc.reps + ' reps'
+        : (sc.weight ? sc.weight + ' kg × ' : '') + sc.reps + ' reps';
+      return `<div class="plan-set-detail">
+        <span class="psd-num">Set ${si+1}</span>
+        <span class="psd-config">${configText}</span>
+        ${estWeight ? `<span class="psd-est">${estWeight} kg</span>` : ''}
+      </div>`;
+    }).join('') : '';
+
+    const warmupHtml = (ex.type === 'strength' && (ex.warmupSets || 0) > 0)
+      ? `<div class="plan-set-detail" style="opacity:0.55">
+          <span class="psd-num" style="color:var(--info)">W/U</span>
+          <span class="psd-config">${ex.warmupSets} warm-up set${ex.warmupSets > 1 ? 's' : ''} — ~60% working weight</span>
+        </div>` : '';
+
+    return `<div class="plan-ex-row">
+      <div class="plan-ex-num">${i+1}</div>
+      <div class="plan-ex-name">${escapeHtml(ex.name)}<div style="font-size:10px;color:var(--text3);font-weight:400">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</div></div>
+      <div class="plan-ex-detail">${ex.type === 'cardio'
+        ? (ex.duration ? ex.duration + ' min' : 'Cardio')
+        : (ex.setConfigs ? (ex.warmupSets ? '1W + ' : '') + ex.setConfigs.length + ' sets' : '')
+      }</div>
+      ${oneRM ? `<div style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">1RM ${oneRM}kg</div>` : ''}
+    </div>
+    ${warmupHtml}
+    ${setsHtml}
+    ${ex.notes ? `<div style="margin:4px 0 8px;font-size:11px;color:var(--text3);padding:6px 8px;background:var(--bg4);border-radius:6px;line-height:1.5">📝 ${escapeHtml(ex.notes)}</div>` : ''}`;
   }).join('');
 }
 
@@ -2401,8 +2445,18 @@ function goToPlanList() {
   renderPlans();
 }
 
+function goToPlanDetail() {
+  plansState = { view: 'plan', planId: plansState.planId, workoutId: null };
+  renderPlans();
+}
+
 function openPlan(planId) {
-  plansState = { view: 'plan', planId };
+  plansState = { view: 'plan', planId, workoutId: null };
+  renderPlans();
+}
+
+function viewPlanWorkout(planId, workoutId) {
+  plansState = { view: 'workout', planId, workoutId };
   renderPlans();
 }
 
@@ -2852,7 +2906,7 @@ function renderHomeQuickStart() {
       </div>`;
     return wks.map(wk => {
       const exNames = (wk.exercises||[]).map(e=>e.name);
-      return `<div class="card" style="cursor:pointer;padding:12px 16px;margin-bottom:10px" onclick="openPlanFromHome('${plan.id}')">
+      return `<div class="card" style="cursor:pointer;padding:12px 16px;margin-bottom:10px" onclick="openPlanFromHome('${plan.id}','${wk.id}')">
         <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">📁 ${plan.name}</div>
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -2867,8 +2921,12 @@ function renderHomeQuickStart() {
 }
 
 // MODAL HELPERS
-function openPlanFromHome(planId) {
-  plansState = { view: 'plan', planId };
+function openPlanFromHome(planId, workoutId) {
+  plansState = {
+    view: workoutId ? 'workout' : 'plan',
+    planId,
+    workoutId: workoutId || null
+  };
   switchTab('plans', document.querySelectorAll('.nav-btn')[2]);
 }
 function openModal(id) { document.getElementById(id).classList.add('show'); }
