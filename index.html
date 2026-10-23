@@ -586,7 +586,11 @@
       <div id="plans-view"></div>
     </div>
 
-  </main>
+    <div style="text-align:center;padding:16px 8px;font-size:11px;color:var(--text3)">
+      Exercise data by <a href="https://repdb.co" target="_blank" rel="noopener noreferrer" style="color:var(--text2)">RepDB (repdb.co)</a>
+    </div>
+
+    </main>
 
   <!-- NAV -->
   <nav id="nav" style="grid-template-columns:repeat(5,1fr)">
@@ -637,9 +641,11 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Add Exercise</div>
-    <div class="type-pills">
-      <div class="type-pill selected" onclick="selectExType('strength',this)">💪 Strength</div>
-      <div class="type-pill" onclick="selectExType('cardio',this)">🏃 Cardio</div>
+    <div class="type-pills" id="exercise-category-pills" style="flex-wrap:wrap">
+      <div class="type-pill selected" data-category="strength" onclick="selectExCategory('strength',this)">💪 Strength</div>
+      <div class="type-pill" data-category="olympic" onclick="selectExCategory('olympic',this)">🏋 Olympic</div>
+      <div class="type-pill" data-category="plyometrics" onclick="selectExCategory('plyometrics',this)">⚡ Plyo</div>
+      <div class="type-pill" data-category="cardio" onclick="selectExCategory('cardio',this)">🏃 Cardio</div>
     </div>
     <div class="form-group">
       <label>Exercise</label>
@@ -658,8 +664,8 @@
     <div id="ex-cardio-fields" style="display:none">
       <div class="cardio-fields">
         <div class="form-group"><label>Duration (min)</label><input type="number" id="ex-duration" value="30" min="1"></div>
-        <div class="form-group"><label>Distance (km)</label><input type="number" id="ex-distance" value="" placeholder="–" step="0.1"></div>
-        <div class="form-group"><label>Calories</label><input type="number" id="ex-calories" value="" placeholder="–"></div>
+        <div class="form-group"><label>Distance (km)</label><input type="number" id="ex-distance" value="" placeholder="–" min="0" step="0.1"></div>
+        <div class="form-group"><label>Calories</label><input type="number" id="ex-calories" value="" placeholder="–" min="0" step="1"></div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -736,9 +742,11 @@
       <div class="modal-title" style="margin-bottom:0" id="plan-ex-modal-title">Add Exercise</div>
       <button class="btn btn-xs btn-secondary" id="plan-ex-edit-indicator" style="display:none;pointer-events:none;color:var(--accent);border-color:var(--accent)">Editing</button>
     </div>
-    <div class="type-pills" id="plan-ex-type-pills">
-      <div class="type-pill selected" onclick="selectPlanExType('strength',this)">💪 Strength</div>
-      <div class="type-pill" onclick="selectPlanExType('cardio',this)">🏃 Cardio</div>
+    <div class="type-pills" id="plan-ex-type-pills" style="flex-wrap:wrap">
+      <div class="type-pill selected" data-category="strength" onclick="selectPlanExCategory('strength',this)">💪 Strength</div>
+      <div class="type-pill" data-category="olympic" onclick="selectPlanExCategory('olympic',this)">🏋 Olympic</div>
+      <div class="type-pill" data-category="plyometrics" onclick="selectPlanExCategory('plyometrics',this)">⚡ Plyo</div>
+      <div class="type-pill" data-category="cardio" onclick="selectPlanExCategory('cardio',this)">🏃 Cardio</div>
     </div>
     <div class="form-group">
       <label>Exercise</label>
@@ -832,76 +840,195 @@ const TEMPLATES = [
   { name: 'Cardio Session', exercises: [], cardio: true },
   { name: 'HIIT', exercises: [], cardio: true },
 ];
-const STRENGTH_EXERCISES = [
-  // CHEST
-  'Bench Press','Incline Bench Press','45° Incline Barbell Press','Decline Bench Press',
-  'Dumbbell Fly','Bottom-Half DB Flye','Cable Fly','Cable Crossover','Push-ups','Dips',
-  // SHOULDERS
-  'Overhead Press','Arnold Press','Machine Shoulder Press','Lateral Raises',
-  'High-Cable Lateral Raise','Front Raises','Rear Delt Fly',
-  // BICEPS
-  'Bicep Curls','Hammer Curls','Preacher Curls','EZ-Bar Curl','Bayesian Cable Curl',
-  // TRICEPS
-  'Tricep Dips','Skull Crushers','Tricep Pushdown','Overhead Cable Triceps Extension','Cable Triceps Kickback',
-  // BACK / PULL
-  'Pull-ups','Wide-Grip Pull-Up','Chin-ups','Barbell Rows','Pendlay Row',
-  'Cable Rows','Seated Rows','Chest-Supported Machine Row','Lat Pulldown','Neutral-Grip Lat Pulldown',
-  'Face Pulls','Machine Shrug',
-  // LEGS
-  'Squat','Smith Machine Squat','Front Squat','Hack Squat','DB Bulgarian Split Squat',
-  'Leg Press','Leg Extension','Leg Curls','Lying Leg Curl','Romanian Deadlift','Barbell RDL',
-  'Deadlift','Sumo Deadlift','Hip Thrust','Glute Bridge',
-  'Calf Raises','Seated Calf Raises','Machine Hip Adduction','Machine Hip Abduction',
-  // CORE
-  'Plank','Ab Rollout','Crunches','Cable Crunch','Roman Chair Leg Raise',
-  'Russian Twists','Leg Raises',
-];
-const CARDIO_EXERCISES = ['Running','Treadmill Run','Cycling','Stationary Bike','Rowing Machine','Elliptical','Swimming','Jump Rope','Stair Climber','HIIT Sprint','Walking','Hiking'];
-const MUSCLE_MAP = {
-  // Chest
-  'Bench Press': ['Chest','Triceps','Shoulders'], 'Incline Bench Press': ['Chest','Shoulders'],
-  '45° Incline Barbell Press': ['Chest','Shoulders'], 'Decline Bench Press': ['Chest'],
-  'Dumbbell Fly': ['Chest'], 'Bottom-Half DB Flye': ['Chest'], 'Cable Fly': ['Chest'],
-  'Cable Crossover': ['Chest'], 'Push-ups': ['Chest','Triceps'], 'Dips': ['Chest','Triceps'],
-  // Shoulders
-  'Overhead Press': ['Shoulders','Triceps'], 'Arnold Press': ['Shoulders'],
-  'Machine Shoulder Press': ['Shoulders','Triceps'],
-  'Lateral Raises': ['Shoulders'], 'High-Cable Lateral Raise': ['Shoulders'],
-  'Front Raises': ['Shoulders'], 'Rear Delt Fly': ['Shoulders'],
-  // Biceps
-  'Bicep Curls': ['Biceps'], 'Hammer Curls': ['Biceps','Forearms'], 'Preacher Curls': ['Biceps'],
-  'EZ-Bar Curl': ['Biceps'], 'Bayesian Cable Curl': ['Biceps'],
-  // Triceps
-  'Tricep Dips': ['Triceps'], 'Skull Crushers': ['Triceps'], 'Tricep Pushdown': ['Triceps'],
-  'Overhead Cable Triceps Extension': ['Triceps'], 'Cable Triceps Kickback': ['Triceps'],
-  // Back / Pull
-  'Pull-ups': ['Back','Biceps'], 'Wide-Grip Pull-Up': ['Back','Biceps'], 'Chin-ups': ['Back','Biceps'],
-  'Barbell Rows': ['Back'], 'Pendlay Row': ['Back'], 'Cable Rows': ['Back'],
-  'Seated Rows': ['Back'], 'Chest-Supported Machine Row': ['Back'],
-  'Lat Pulldown': ['Back'], 'Neutral-Grip Lat Pulldown': ['Back'],
-  'Face Pulls': ['Back','Shoulders'], 'Machine Shrug': ['Shoulders'],
-  // Legs
-  'Squat': ['Quads','Glutes'], 'Smith Machine Squat': ['Quads','Glutes'],
-  'Front Squat': ['Quads'], 'Hack Squat': ['Quads'],
-  'DB Bulgarian Split Squat': ['Quads','Glutes'],
-  'Leg Press': ['Quads','Glutes'], 'Leg Extension': ['Quads'],
-  'Leg Curls': ['Hamstrings'], 'Lying Leg Curl': ['Hamstrings'],
-  'Romanian Deadlift': ['Hamstrings','Glutes'], 'Barbell RDL': ['Hamstrings','Glutes'],
-  'Deadlift': ['Back','Glutes','Hamstrings'], 'Sumo Deadlift': ['Glutes','Quads'],
-  'Hip Thrust': ['Glutes'], 'Glute Bridge': ['Glutes'],
-  'Calf Raises': ['Calves'], 'Seated Calf Raises': ['Calves'],
-  'Machine Hip Adduction': ['Quads'], 'Machine Hip Abduction': ['Glutes'],
-  // Core
-  'Plank': ['Core'], 'Ab Rollout': ['Core'], 'Crunches': ['Core'],
-  'Cable Crunch': ['Core'], 'Roman Chair Leg Raise': ['Core'],
-  'Russian Twists': ['Core'], 'Leg Raises': ['Core'],
-};
-
 let db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
 let timerInterval = null;
 let currentExType = 'strength';
+let currentExCategory = 'strength';
 let currentUser = null;
 let authReady = false;
+let exerciseCatalog = [];
+let exerciseMuscleMap = {};
+let catalogLoading = false;
+let catalogError = null;
+let catalogOffline = false;
+let SPIDER_MUSCLES = [];
+
+function exerciseTypeForCategory(category) {
+  return category === 'cardio' ? 'cardio' : 'strength';
+}
+
+function exerciseCategory(exercise) {
+  const listing = exercise?.exerciseListingId
+    ? catalogExerciseById(exercise.exerciseListingId)
+    : null;
+  return exercise?.category || listing?.category ||
+    exercise?.type || exercise?.exercise_type || 'strength';
+}
+
+function exerciseCategoryLabel(category) {
+  return ({
+    strength: 'Strength',
+    cardio: 'Cardio',
+    olympic: 'Olympic',
+    plyometrics: 'Plyometric'
+  })[category] || 'Strength';
+}
+
+function exerciseCategoryEntries(type, category, selectedId) {
+  const entries = exerciseCatalog.filter(ex =>
+    ex.exercise_type === type && exerciseCategory(ex) === category && ex.is_active !== false
+  );
+  const selected = selectedId ? catalogExerciseById(selectedId) : null;
+  if (selected && selected.exercise_type === type && exerciseCategory(selected) === category &&
+      !entries.some(ex => ex.exercise_listing_id === selectedId)) {
+    entries.push(selected);
+  }
+  return entries;
+}
+
+function exerciseCatalogCacheKey(userId) {
+  return `${userStorageKey(userId)}_exercise_catalog_v2`;
+}
+
+function cacheExerciseCatalog(userId) {
+  try {
+    localStorage.setItem(exerciseCatalogCacheKey(userId), JSON.stringify({
+      exercises: exerciseCatalog,
+      muscles: SPIDER_MUSCLES,
+      exerciseMuscles: exerciseMuscleMap
+    }));
+  } catch (error) {
+    console.error('Could not cache exercise catalog:', error);
+  }
+}
+
+function catalogExerciseById(id) {
+  return exerciseCatalog.find(ex => ex.exercise_listing_id === id) || null;
+}
+
+function catalogExerciseByName(name, type) {
+  const normalized = normalizeExerciseName(name);
+  if (!normalized) return null;
+  const typed = exerciseCatalog.filter(ex => ex.exercise_type === type);
+  const owned = typed.filter(ex => ex.user_id === currentUser?.id);
+  const exactOwned = owned.find(ex => normalizeExerciseName(ex.name) === normalized);
+  if (exactOwned) return exactOwned;
+  const exactShared = typed.find(ex => !ex.user_id && normalizeExerciseName(ex.name) === normalized);
+  if (exactShared) return exactShared;
+  const matchesAlias = ex => (ex.synonyms || []).some(alias => normalizeExerciseName(alias) === normalized);
+  const ownedAliases = owned.filter(matchesAlias);
+  if (ownedAliases.length === 1) return ownedAliases[0];
+  const sharedAliases = typed.filter(ex => !ex.user_id && matchesAlias(ex));
+  return sharedAliases.length === 1 ? sharedAliases[0] : null;
+}
+
+function normalizeExerciseName(name) {
+  return String(name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function musclesForExercise(exercise) {
+  const entry = exercise.exerciseListingId
+    ? catalogExerciseById(exercise.exerciseListingId)
+    : catalogExerciseByName(exercise.name, exercise.type);
+  return entry ? exerciseMuscleMap[entry.exercise_listing_id] || [] : [];
+}
+
+async function loadExerciseCatalog() {
+  const client = getSupabaseClient();
+  if (!client || !currentUser) return;
+  const userId = currentUser.id;
+  catalogLoading = true;
+  catalogError = null;
+  catalogOffline = false;
+  try {
+    const [exerciseResult, muscleResult, groupResult] = await Promise.all([
+      client.from('exercise_listing')
+        .select('exercise_listing_id,user_id,name,description,exercise_type,category,is_active,synonyms')
+        .order('name'),
+      client.from('exercise_muscle_groups')
+        .select('exercise_listing_id,muscle_groups(name)'),
+      client.from('muscle_groups').select('name').eq('include_in_overview', true).order('name')
+    ]);
+    if (exerciseResult.error) throw exerciseResult.error;
+    if (muscleResult.error) throw muscleResult.error;
+    if (groupResult.error) throw groupResult.error;
+    if (currentUser?.id !== userId) return;
+    exerciseCatalog = exerciseResult.data || [];
+    SPIDER_MUSCLES = (groupResult.data || []).map(group => group.name);
+    exerciseMuscleMap = {};
+    (muscleResult.data || []).forEach(row => {
+      const muscle = Array.isArray(row.muscle_groups) ? row.muscle_groups[0] : row.muscle_groups;
+      if (!muscle?.name) return;
+      if (!exerciseMuscleMap[row.exercise_listing_id]) exerciseMuscleMap[row.exercise_listing_id] = [];
+      if (!exerciseMuscleMap[row.exercise_listing_id].includes(muscle.name)) {
+        exerciseMuscleMap[row.exercise_listing_id].push(muscle.name);
+      }
+    });
+    cacheExerciseCatalog(userId);
+  } catch (error) {
+    if (currentUser?.id !== userId) return;
+    catalogError = error;
+    try {
+      const cached = JSON.parse(localStorage.getItem(exerciseCatalogCacheKey(userId)) || 'null');
+      if (Array.isArray(cached?.exercises) && Array.isArray(cached?.muscles) &&
+          cached.exerciseMuscles && typeof cached.exerciseMuscles === 'object') {
+        exerciseCatalog = cached.exercises;
+        SPIDER_MUSCLES = cached.muscles;
+        exerciseMuscleMap = cached.exerciseMuscles;
+        catalogOffline = true;
+      } else {
+        exerciseCatalog = [];
+        exerciseMuscleMap = {};
+        SPIDER_MUSCLES = [];
+      }
+    } catch (cacheError) {
+      console.error('Could not load cached exercise catalog:', cacheError);
+      exerciseCatalog = [];
+      exerciseMuscleMap = {};
+      SPIDER_MUSCLES = [];
+    }
+    console.error('Could not load exercise catalog:', error);
+    showToast(catalogOffline ? 'Using cached exercise catalog' : 'Exercise catalog failed to load');
+  } finally {
+    if (currentUser?.id === userId) catalogLoading = false;
+  }
+}
+
+async function ensureExerciseListing(name, type, existingId, category) {
+  let selected = existingId ? catalogExerciseById(existingId) : catalogExerciseByName(name, type);
+  if (!existingId && selected && category && exerciseCategory(selected) !== category) selected = null;
+  if (selected) return selected;
+  if (!currentUser || !name?.trim()) throw new Error('Select or enter an exercise name.');
+  if (catalogError) {
+    throw new Error(catalogOffline
+      ? 'A new custom exercise cannot be added while offline.'
+      : 'The exercise catalog is unavailable. Try again after it loads.');
+  }
+
+  const client = getSupabaseClient();
+  const userId = currentUser.id;
+  const { data, error } = await client.from('exercise_listing')
+    .insert({
+      user_id: userId,
+      name: name.trim(),
+      exercise_type: type,
+      category: category || type
+    })
+    .select('exercise_listing_id,user_id,name,description,exercise_type,category,is_active,synonyms')
+    .single();
+  if (error) {
+    if (error.code === '23505') {
+      await loadExerciseCatalog();
+      const match = catalogExerciseByName(name, type);
+      if (match && (!category || exerciseCategory(match) === category)) return match;
+    }
+    throw error;
+  }
+  if (currentUser?.id !== userId) throw new Error('Account changed while adding the exercise. Try again.');
+  exerciseCatalog.push(data);
+  cacheExerciseCatalog(userId);
+  return data;
+}
 
 function userStorageKey(userId) { return `ironlog_user_${userId}`; }
 function save() {
@@ -928,6 +1055,10 @@ async function applyAuthSession(user) {
   if (!currentUser) {
     authReady = true;
     db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
+    exerciseCatalog = [];
+    exerciseMuscleMap = {};
+    catalogError = null;
+    catalogOffline = false;
     stopTimer();
     renderAccountControls();
     renderHome();
@@ -948,6 +1079,7 @@ async function applyAuthSession(user) {
   if (!Array.isArray(db.workouts)) db.workouts = [];
   if (!Array.isArray(db.plans)) db.plans = [];
   if (!db.prs || typeof db.prs !== 'object') db.prs = {};
+  updatePRs();
 
   authReady = true;
   seedBTSPlan();
@@ -957,7 +1089,10 @@ async function applyAuthSession(user) {
   renderHistory();
   renderLog();
   renderPlans();
-  await fetchWorkoutsFromCloud();
+  await loadExerciseCatalog();
+  updateExSelect();
+  updatePlanExSelect();
+  if (!catalogError) await fetchWorkoutsFromCloud();
 }
 
 async function initAuth() {
@@ -1017,28 +1152,79 @@ async function fetchWorkoutsFromCloud() {
     const client = getSupabaseClient();
     if (!client) return;
 
-    const { data, error } = await client
+    const [workoutResult, exerciseResult, setResult] = await Promise.all([
+      client
       .from('workouts')
       .select('*')
       .eq('user_id', userId)
-      .order('start_time', { ascending: true });
-    if (error) throw error;
+      .order('start_time', { ascending: true }),
+      client.from('workout_exercises')
+        .select('*')
+        .eq('owner', userId)
+        .order('exercise_order', { ascending: true }),
+      client.from('recorded_sets')
+        .select('*')
+        .eq('owner', userId)
+        .order('set_number', { ascending: true })
+    ]);
+    if (workoutResult.error) throw workoutResult.error;
+    if (exerciseResult.error) throw exerciseResult.error;
+    if (setResult.error) throw setResult.error;
     if (currentUser?.id !== userId) return;
 
-    db.workouts = (data || []).map(workout => ({
-        id: workout.id,
-        name: workout.name,
-        startTime: workout.start_time,
-        endTime: workout.end_time,
-        duration: workout.duration,
-        volume: workout.volume,
-        exercises: workout.exercises || []
+    const listingById = new Map(exerciseCatalog.map(ex => [ex.exercise_listing_id, ex]));
+    const setsByOccurrence = new Map();
+    (setResult.data || []).forEach(set => {
+      if (!setsByOccurrence.has(set.workout_exercise_id)) setsByOccurrence.set(set.workout_exercise_id, []);
+      setsByOccurrence.get(set.workout_exercise_id).push({
+        setNumber: set.set_number,
+        reps: set.repetitions == null ? '' : String(set.repetitions),
+        weight: set.weight == null ? '' : String(set.weight),
+        done: set.is_completed,
+        isWarmup: set.is_warmup,
+        notes: set.notes || ''
+      });
+    });
+    const exercisesByWorkout = new Map();
+    (exerciseResult.data || []).forEach(occurrence => {
+      const exercise = listingById.get(occurrence.exercise_listing_id);
+      if (!exercise) {
+        console.error('Workout references an exercise missing from the catalog:', occurrence.exercise_listing_id);
+        return;
+      }
+      const item = {
+        id: occurrence.workout_exercise_id,
+        exerciseListingId: occurrence.exercise_listing_id,
+        name: exercise.name,
+        type: exercise.exercise_type,
+        category: exercise.category || exercise.exercise_type,
+        completed: occurrence.is_completed,
+        sets: setsByOccurrence.get(occurrence.workout_exercise_id) || [],
+        duration: occurrence.duration_minutes == null ? '' : String(occurrence.duration_minutes),
+        distance: occurrence.distance_km == null ? '' : String(occurrence.distance_km),
+        calories: occurrence.calories == null ? '' : String(occurrence.calories)
+      };
+      const key = String(occurrence.workout_id);
+      if (!exercisesByWorkout.has(key)) exercisesByWorkout.set(key, []);
+      exercisesByWorkout.get(key).push(item);
+    });
+    db.workouts = (workoutResult.data || []).map(workout => ({
+      id: String(workout.id),
+      name: workout.name,
+      startTime: workout.start_time,
+      endTime: workout.end_time,
+      duration: workout.duration,
+      volume: workout.volume,
+      exercises: exercisesByWorkout.get(String(workout.id)) || []
     }));
+    updatePRs();
     save();
     renderHome();
     renderHistory();
+    renderProgress();
   } catch (error) {
     console.error('Error fetching cloud workouts:', error);
+    showToast('Workout history failed to load');
   }
 }
 
@@ -1130,13 +1316,13 @@ function workoutCard(w) {
   const exNames = (w.exercises||[]).map(e=>e.name);
   return `<div class="history-item" onclick="showDetail('${w.id}')">
     <div class="history-date">${new Date(w.startTime).toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'})}</div>
-    <div class="history-name">${w.name}</div>
+    <div class="history-name">${escapeHtml(w.name)}</div>
     <div class="history-meta">
       <span>⏱ ${w.duration||0} min</span>
       <span>💪 ${(w.exercises||[]).length} exercises</span>
       ${w.volume ? `<span>🏋 ${Math.round(w.volume)} kg</span>` : ''}
     </div>
-    <div class="history-pills">${exNames.slice(0,4).map(n=>`<span class="history-pill">${n}</span>`).join('')}${exNames.length>4?`<span class="history-pill">+${exNames.length-4}</span>`:''}</div>
+    <div class="history-pills">${exNames.slice(0,4).map(n=>`<span class="history-pill">${escapeHtml(n)}</span>`).join('')}${exNames.length>4?`<span class="history-pill">+${exNames.length-4}</span>`:''}</div>
   </div>`;
 }
 
@@ -1181,7 +1367,9 @@ function _quickStartLoad(name) {
   if (tpl && tpl.exercises.length) {
     tpl.exercises.forEach(ex => {
       db.activeWorkout.exercises.push({
-        id: Date.now() + Math.random(), name: ex, type: 'strength',
+        id: Date.now() + Math.random(),
+        exerciseListingId: catalogExerciseByName(ex, 'strength')?.exercise_listing_id,
+        name: ex, type: 'strength', category: 'strength',
         sets: [{ reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }]
       });
     });
@@ -1212,7 +1400,15 @@ function showConfirm(title, body, onOk) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-body').textContent = body;
   const btn = document.getElementById('confirm-ok-btn');
-  btn.onclick = () => { closeModal('confirm-modal'); onOk(); };
+  btn.onclick = async () => {
+    closeModal('confirm-modal');
+    try {
+      await onOk();
+    } catch (error) {
+      console.error('Confirmed action failed:', error);
+      showToast(error.message || 'The requested action failed');
+    }
+  };
   openModal('confirm-modal');
 }
 
@@ -1225,55 +1421,156 @@ function discardWorkout() {
 
 async function finishWorkout() {
   if (!db.activeWorkout || !currentUser) return;
-  const dur = Math.round((Date.now() - db.activeWorkout.startTime) / 60000);
-  let vol = 0;
-  db.activeWorkout.exercises.forEach(ex => {
-    if (ex.type === 'strength') ex.sets.forEach(s => { if (s.weight && s.reps) vol += parseFloat(s.weight) * parseInt(s.reps); });
-  });
-  const endTime = Date.now();
-  const workout = { ...db.activeWorkout, duration: dur, volume: vol, endTime };
-  const workoutForSync = {
-    id: db.activeWorkout.id,
-    user_id: currentUser.id,
-    name: db.activeWorkout.name,
-    start_time: db.activeWorkout.startTime,
-    end_time: endTime,
-    duration: dur,
-    volume: vol,
-    exercises: db.activeWorkout.exercises
-  };
-  db.workouts.push(workout);
-  db.activeWorkout = null;
-  save(); stopTimer();
-  updatePRs(workout);
-  renderLog(); renderHome();
-  showToast('Workout saved locally');
-
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { error } = await client.from('workouts').insert([workoutForSync]);
-      if (error) throw error;
-      showToast('Workout synced');
-    } catch (err) {
-      console.error('Supabase network/sync error:', err);
-      showToast('Saved locally; sync failed');
+  if (!client) {
+    showToast('Unable to connect to the workout database');
+    return;
+  }
+
+  try {
+    const completedExercises = [];
+    for (const [exerciseIndex, exercise] of db.activeWorkout.exercises.entries()) {
+      if (exercise.type === 'strength') {
+        const completedSets = [];
+        (exercise.sets || []).forEach((set, setIndex) => {
+          if (set.done !== true) return;
+          const reps = set.reps == null || set.reps === '' ? null : parseInt(set.reps, 10);
+          const weight = set.weight == null || set.weight === '' ? null : parseFloat(set.weight);
+          if (reps !== null && (!Number.isInteger(reps) || reps < 0)) {
+            throw new Error(`${exercise.name}: repetitions must be a non-negative whole number.`);
+          }
+          if (weight !== null && (!Number.isFinite(weight) || weight < 0)) {
+            throw new Error(`${exercise.name}: weight must be a non-negative number.`);
+          }
+          completedSets.push({
+            ...set,
+            set_number: setIndex + 1,
+            reps,
+            weight,
+            isWarmup: !!set.isWarmup
+          });
+        });
+        if (!completedSets.length) continue;
+        const listing = await ensureExerciseListing(
+          exercise.name, 'strength', exercise.exerciseListingId, exercise.category || 'strength'
+        );
+        completedExercises.push({
+          exercise_listing_id: listing.exercise_listing_id,
+          type: 'strength',
+          category: listing.category || exercise.category || 'strength',
+          exercise_order: exerciseIndex + 1,
+          sets: completedSets
+        });
+      } else if (exercise.type === 'cardio' && exercise.completed === true) {
+        const listing = await ensureExerciseListing(
+          exercise.name, 'cardio', exercise.exerciseListingId, exercise.category || 'cardio'
+        );
+        completedExercises.push({
+          exercise_listing_id: listing.exercise_listing_id,
+          type: 'cardio',
+          category: listing.category || 'cardio',
+          exercise_order: exerciseIndex + 1,
+          completed: true,
+          duration: exercise.duration || '',
+          distance: exercise.distance || '',
+          calories: exercise.calories || ''
+        });
+      }
     }
+
+    const hasCompletedSet = completedExercises.some(ex => ex.type === 'strength' && ex.sets.length);
+    const hasCompletedCardio = completedExercises.some(ex => ex.type === 'cardio' && ex.completed);
+    if (!hasCompletedSet && !hasCompletedCardio) {
+      showToast('Complete a set or mark a cardio entry complete before finishing');
+      return;
+    }
+
+    const duration = Math.round((Date.now() - db.activeWorkout.startTime) / 60000);
+    const endTime = Date.now();
+    const volume = completedExercises.reduce((total, ex) => {
+      if (ex.type !== 'strength') return total;
+      return total + ex.sets.reduce((sum, set) =>
+        sum + (parseFloat(set.weight) || 0) * (parseInt(set.reps, 10) || 0), 0);
+    }, 0);
+    const workoutPayload = {
+      id: db.activeWorkout.id,
+      name: db.activeWorkout.name,
+      start_time: db.activeWorkout.startTime,
+      end_time: endTime,
+      duration
+    };
+    const { data: savedId, error } = await client.rpc('save_completed_workout', {
+      p_workout: workoutPayload,
+      p_exercises: completedExercises
+    });
+    if (error) throw error;
+
+    const workout = {
+      id: String(savedId || db.activeWorkout.id),
+      name: db.activeWorkout.name,
+      startTime: db.activeWorkout.startTime,
+      endTime,
+      duration,
+      volume,
+      exercises: completedExercises.map(ex => ex.type === 'strength'
+        ? {
+          exerciseListingId: ex.exercise_listing_id,
+          name: catalogExerciseById(ex.exercise_listing_id).name,
+          type: 'strength',
+          category: ex.category,
+          sets: ex.sets.map(set => ({
+            setNumber: set.set_number,
+            reps: set.reps,
+            weight: set.weight,
+            done: true,
+            isWarmup: !!set.isWarmup,
+            notes: set.notes || ''
+          }))
+        }
+        : {
+          exerciseListingId: ex.exercise_listing_id,
+          name: catalogExerciseById(ex.exercise_listing_id).name,
+          type: 'cardio',
+          category: ex.category,
+          completed: true,
+          duration: ex.duration,
+          distance: ex.distance,
+          calories: ex.calories
+        })
+    };
+    db.workouts.push(workout);
+    db.activeWorkout = null;
+    save();
+    stopTimer();
+    updatePRs();
+    renderLog();
+    renderHome();
+    renderHistory();
+    renderProgress();
+    showToast('Workout saved');
+  } catch (error) {
+    console.error('Workout save failed:', error);
+    showToast(`Workout save failed: ${error.message || 'Please try again'}`);
   }
 }
 
-function updatePRs(workout) {
-  if (!db.prs) db.prs = {};
-  workout.exercises.forEach(ex => {
-    if (ex.type === 'strength') {
-      ex.sets.forEach(s => {
-        const w = parseFloat(s.weight)||0, r = parseInt(s.reps)||0;
-        if (!w || !r) return;
-        const est1RM = Math.round(w * (1 + r/30));
-        if (!db.prs[ex.name] || est1RM > db.prs[ex.name]) db.prs[ex.name] = est1RM;
+function updatePRs() {
+  const prs = {};
+  db.workouts.forEach(workout => {
+    (workout.exercises || []).forEach(exercise => {
+      if (exercise.type !== 'strength') return;
+      (exercise.sets || []).filter(set => set.done === true).forEach(set => {
+        const weight = parseFloat(set.weight) || 0;
+        const repetitions = parseInt(set.reps, 10) || 0;
+        if (!weight || !repetitions) return;
+        const estimatedOneRepMax = Math.round(weight * (1 + repetitions / 30));
+        if (!prs[exercise.name] || estimatedOneRepMax > prs[exercise.name]) {
+          prs[exercise.name] = estimatedOneRepMax;
+        }
       });
-    }
+    });
   });
+  db.prs = prs;
   save();
 }
 
@@ -1300,10 +1597,12 @@ function getSetSuggestion(exerciseName, setIndex) {
     const match = (w.exercises || []).find(ex =>
       ex.type === 'strength' && ex.name === exerciseName
     );
-    if (match && match.sets && match.sets[setIndex]) {
-      const s = match.sets[setIndex];
+    if (match && match.sets) {
+      const s = match.sets.find(set => set.setNumber === setIndex + 1)
+        || (match.sets.every(set => set.setNumber == null) ? match.sets[setIndex] : null);
+      if (!s) continue;
       // Only suggest if at least one value was recorded
-      if (s.weight || s.reps) return { weight: s.weight || '', reps: s.reps || '' };
+      if (s.done && (s.weight || s.reps)) return { weight: s.weight || '', reps: s.reps || '' };
     }
   }
   return null;
@@ -1320,24 +1619,30 @@ function renderExercises() {
     if (ex.type === 'cardio') {
       return `<div class="exercise-item">
         <div class="exercise-header">
-          <div class="exercise-name">${ex.name}</div>
+          <div class="exercise-name">${escapeHtml(ex.name)}</div>
           <div style="display:flex;align-items:center;gap:8px">
-            <span class="exercise-type-tag tag-cardio">Cardio</span>
+            <span class="exercise-type-tag tag-cardio">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</span>
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
+              <input type="checkbox" ${ex.completed ? 'checked' : ''} onchange="toggleCardioComplete(${ei},this.checked)">
+              Completed
+            </label>
             <button class="btn btn-xs btn-danger" onclick="removeExercise(${ei})">✕</button>
           </div>
         </div>
         <div class="cardio-fields">
-          <div class="form-group"><label>Duration (min)</label><input type="number" value="${ex.duration||''}" onchange="updateCardio(${ei},'duration',this.value)" placeholder="0"></div>
-          <div class="form-group"><label>Distance (km)</label><input type="number" value="${ex.distance||''}" onchange="updateCardio(${ei},'distance',this.value)" placeholder="–" step="0.1"></div>
-          <div class="form-group"><label>Calories</label><input type="number" value="${ex.calories||''}" onchange="updateCardio(${ei},'calories',this.value)" placeholder="–"></div>
+          <div class="form-group"><label>Duration (min)</label><input type="number" value="${ex.duration||''}" min="0" onchange="updateCardio(${ei},'duration',this.value)" placeholder="0"></div>
+          <div class="form-group"><label>Distance (km)</label><input type="number" value="${ex.distance||''}" min="0" onchange="updateCardio(${ei},'distance',this.value)" placeholder="–" step="0.1"></div>
+          <div class="form-group"><label>Calories</label><input type="number" value="${ex.calories||''}" min="0" step="1" onchange="updateCardio(${ei},'calories',this.value)" placeholder="–"></div>
         </div>
       </div>`;
     }
     return `<div class="exercise-item">
       <div class="exercise-header">
-        <div class="exercise-name">${ex.name}</div>
+        <div class="exercise-name">${escapeHtml(ex.name)}</div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="exercise-type-tag tag-strength">Strength</span>
+          <span class="exercise-type-tag tag-strength">${escapeHtml(exerciseCategoryLabel(
+            exerciseCategory(ex) || catalogExerciseById(ex.exerciseListingId)?.category || 'strength'
+          ))}</span>
           <button class="btn btn-xs btn-danger" onclick="removeExercise(${ei})">✕</button>
         </div>
       </div>
@@ -1351,8 +1656,8 @@ function renderExercises() {
         return `
         <div class="set-row" style="${isWarmup ? 'opacity:0.6' : ''}">
           <div class="set-num" style="${isWarmup ? 'color:var(--info);font-size:9px' : ''}">${isWarmup ? 'W/U' : si + 1 - ex.sets.slice(0, si).filter(x => x.isWarmup).length}</div>
-          <input type="number" value="${s.weight}" placeholder="${isWarmup ? '~60%' : wPh}" onchange="updateSet(${ei},${si},'weight',this.value)" step="0.5" class="${hasSug&&!s.weight&&!isWarmup?'has-sug':''}">
-          <input type="number" value="${s.reps}"   placeholder="${isWarmup ? 'reps' : rPh}" onchange="updateSet(${ei},${si},'reps',this.value)"   class="${hasSug&&!s.reps&&!isWarmup?'has-sug':''}">
+          <input type="number" value="${s.weight}" placeholder="${isWarmup ? '~60%' : wPh}" min="0" onchange="updateSet(${ei},${si},'weight',this.value)" step="0.5" class="${hasSug&&!s.weight&&!isWarmup?'has-sug':''}">
+          <input type="number" value="${s.reps}"   placeholder="${isWarmup ? 'reps' : rPh}" min="0" step="1" onchange="updateSet(${ei},${si},'reps',this.value)"   class="${hasSug&&!s.reps&&!isWarmup?'has-sug':''}">
           <div class="set-done ${s.done?'checked':''}" onclick="toggleSet(${ei},${si})">${s.done?'✓':''}</div>
         </div>`;
       }).join('')}
@@ -1371,6 +1676,13 @@ function toggleSet(ei, si) {
   if (!db.activeWorkout) return;
   db.activeWorkout.exercises[ei].sets[si].done = !db.activeWorkout.exercises[ei].sets[si].done;
   save(); renderExercises();
+}
+
+function toggleCardioComplete(ei, completed) {
+  if (!db.activeWorkout) return;
+  db.activeWorkout.exercises[ei].completed = completed;
+  save();
+  renderExercises();
 }
 
 function addSet(ei) {
@@ -1395,7 +1707,10 @@ function updateCardio(ei, field, val) {
 // EXERCISE MODAL
 function addExerciseModal() {
   currentExType = 'strength';
-  document.querySelectorAll('.type-pill').forEach((p,i) => p.classList.toggle('selected', i===0));
+  currentExCategory = 'strength';
+  document.querySelectorAll('#exercise-category-pills .type-pill').forEach(p =>
+    p.classList.toggle('selected', p.dataset.category === currentExCategory)
+  );
   updateExSelect();
   document.getElementById('ex-custom').value = '';
   document.getElementById('ex-sets').value = '3';
@@ -1404,40 +1719,76 @@ function addExerciseModal() {
   openModal('exercise-modal');
 }
 
-function selectExType(type, el) {
-  currentExType = type;
-  document.querySelectorAll('.type-pill').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
+function selectExCategory(category, el) {
+  currentExCategory = category;
+  currentExType = exerciseTypeForCategory(category);
+  document.querySelectorAll('#exercise-category-pills .type-pill').forEach(p =>
+    p.classList.toggle('selected', p === el)
+  );
   updateExSelect();
-  document.getElementById('ex-strength-fields').style.display = type === 'strength' ? 'block' : 'none';
-  document.getElementById('ex-cardio-fields').style.display = type === 'cardio' ? 'block' : 'none';
+  document.getElementById('ex-strength-fields').style.display = currentExType === 'strength' ? 'block' : 'none';
+  document.getElementById('ex-cardio-fields').style.display = currentExType === 'cardio' ? 'block' : 'none';
 }
 
-function updateExSelect() {
-  const list = currentExType === 'strength' ? STRENGTH_EXERCISES : CARDIO_EXERCISES;
-  document.getElementById('ex-select').innerHTML = list.map(e => `<option>${e}</option>`).join('');
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[character]));
 }
 
-function selectExType(type, el) {
-  currentExType = type;
-  document.querySelectorAll('#exercise-modal .type-pill').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
-  updateExSelect();
-  document.getElementById('ex-strength-fields').style.display = type === 'strength' ? 'block' : 'none';
-  document.getElementById('ex-cardio-fields').style.display   = type === 'cardio'   ? 'block' : 'none';
+function updateExSelect(selectedId) {
+  const select = document.getElementById('ex-select');
+  const entries = exerciseCategoryEntries(currentExType, currentExCategory, selectedId);
+  if (catalogLoading) {
+    select.innerHTML = '<option value="">Loading exercises…</option>';
+    return;
+  }
+  if (catalogError && !entries.length) {
+    select.innerHTML = '<option value="">Exercise catalog unavailable</option>';
+    return;
+  }
+  select.innerHTML = entries.length
+    ? entries.map(ex => `<option value="${ex.exercise_listing_id}">${escapeHtml(ex.name)}</option>`).join('')
+    : '<option value="">No exercises available</option>';
+  if (selectedId && entries.some(ex => ex.exercise_listing_id === selectedId)) select.value = selectedId;
 }
 
-function addExercise() {
+async function addExercise() {
   if (!db.activeWorkout) return;
   const custom = document.getElementById('ex-custom').value.trim();
-  const name = custom || document.getElementById('ex-select').value;
-  if (currentExType === 'strength') {
-    const sets = parseInt(document.getElementById('ex-sets').value) || 3;
-    db.activeWorkout.exercises.push({ id: Date.now(), name, type: 'strength', sets: Array.from({length:sets}, () => ({ reps:'', weight:'', done: false })) });
-  } else {
-    db.activeWorkout.exercises.push({ id: Date.now(), name, type: 'cardio', duration: document.getElementById('ex-duration').value, distance: document.getElementById('ex-distance').value, calories: document.getElementById('ex-calories').value });
+  const selected = catalogExerciseById(document.getElementById('ex-select').value);
+  const name = custom || selected?.name;
+  if (!name) {
+    showToast(catalogError ? 'Exercise catalog is unavailable' : 'Select or enter an exercise');
+    return;
   }
-  save(); closeModal('exercise-modal'); renderExercises();
+  try {
+    const listing = await ensureExerciseListing(
+      name, currentExType, custom ? null : selected?.exercise_listing_id, currentExCategory
+    );
+    if (currentExType === 'strength') {
+      const sets = parseInt(document.getElementById('ex-sets').value, 10) || 3;
+      db.activeWorkout.exercises.push({
+        id: Date.now(), exerciseListingId: listing.exercise_listing_id,
+        name: listing.name, type: 'strength', category: listing.category || currentExCategory,
+        sets: Array.from({length:sets}, () => ({ reps:'', weight:'', done: false }))
+      });
+    } else {
+      db.activeWorkout.exercises.push({
+        id: Date.now(), exerciseListingId: listing.exercise_listing_id,
+        name: listing.name, type: 'cardio', category: listing.category || 'cardio', completed: false,
+        duration: document.getElementById('ex-duration').value,
+        distance: document.getElementById('ex-distance').value,
+        calories: document.getElementById('ex-calories').value
+      });
+    }
+    save();
+    closeModal('exercise-modal');
+    renderExercises();
+  } catch (error) {
+    console.error('Could not add exercise:', error);
+    showToast(`Could not add exercise: ${error.message || 'Please try again'}`);
+  }
 }
 
 // CALENDAR
@@ -1510,28 +1861,34 @@ function renderHistory() {
 }
 
 function clearHistory() {
-  showConfirm('Clear All History?', 'All workout history and personal records will be permanently deleted.', () => {
-    db.workouts = []; db.prs = {};
-    save(); renderHistory(); renderHome();
-    showToast('History cleared');
+  showConfirm('Clear All History?', 'All workout history and personal records will be permanently deleted.', async () => {
     const client = getSupabaseClient();
-    if (client && currentUser) {
-      client.from('workouts').delete().eq('user_id', currentUser.id).then(({ error }) => {
-        if (error) {
-          console.error('Cloud history delete failed:', error.message);
-          showToast('Local history cleared; cloud delete failed');
-        }
-      });
+    if (!client || !currentUser) {
+      showToast('Unable to connect to the workout database');
+      return;
     }
+    const { error } = await client.from('workouts').delete().eq('user_id', currentUser.id);
+    if (error) {
+      console.error('Cloud history delete failed:', error);
+      showToast(`Could not clear history: ${error.message}`);
+      return;
+    }
+    db.workouts = [];
+    db.prs = {};
+    save();
+    renderHistory();
+    renderHome();
+    renderProgress();
+    showToast('History cleared');
   });
 }
 
 function showDetail(id) {
-  const w = db.workouts.find(x => x.id === id);
+  const w = db.workouts.find(x => String(x.id) === String(id));
   if (!w) return;
   const dc = document.getElementById('detail-content');
   dc.innerHTML = `
-    <div class="modal-title">${w.name}</div>
+    <div class="modal-title">${escapeHtml(w.name)}</div>
     <div style="font-size:13px;color:var(--text3);margin-bottom:12px">${new Date(w.startTime).toLocaleDateString('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
     <div class="stats-grid" style="margin-bottom:16px">
       <div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${w.duration||0} <span>min</span></div></div>
@@ -1542,15 +1899,15 @@ function showDetail(id) {
     ${(w.exercises||[]).map(ex => ex.type==='strength' ? `
       <div class="exercise-item" style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <div class="exercise-name">${ex.name}</div>
-          <span class="exercise-type-tag tag-strength">Strength</span>
+          <div class="exercise-name">${escapeHtml(ex.name)}</div>
+          <span class="exercise-type-tag tag-strength">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</span>
         </div>
-        ${ex.sets.map((s,i) => `<div class="set-row"><div class="set-num">${i+1}</div><div style="font-size:14px;color:var(--text2)">${s.weight||'–'} kg</div><div style="font-size:14px;color:var(--text2)">${s.reps||'–'} reps</div><div class="set-done ${s.done?'checked':''}">${s.done?'✓':''}</div></div>`).join('')}
+        ${ex.sets.map((s,i) => `<div class="set-row"><div class="set-num">${s.isWarmup?'W/U':s.setNumber||i+1}</div><div style="font-size:14px;color:var(--text2)">${escapeHtml(s.weight||'–')} kg</div><div style="font-size:14px;color:var(--text2)">${escapeHtml(s.reps||'–')} reps</div><div class="set-done ${s.done?'checked':''}">${s.done?'✓':''}</div></div>`).join('')}
       </div>` : `
       <div class="exercise-item" style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <div class="exercise-name">${ex.name}</div>
-          <span class="exercise-type-tag tag-cardio">Cardio</span>
+          <div class="exercise-name">${escapeHtml(ex.name)}</div>
+          <span class="exercise-type-tag tag-cardio">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</span>
         </div>
         <div style="display:flex;gap:16px;font-size:14px;color:var(--text2)">
           ${ex.duration?`<span>⏱ ${ex.duration} min</span>`:''}
@@ -1564,18 +1921,24 @@ function showDetail(id) {
 }
 
 function deleteWorkout(id) {
-  showConfirm('Delete Workout?', 'This workout will be permanently removed from your history.', () => {
-    db.workouts = db.workouts.filter(w => w.id !== id);
-    save(); closeModal('detail-modal'); renderHistory();
+  showConfirm('Delete Workout?', 'This workout will be permanently removed from your history.', async () => {
     const client = getSupabaseClient();
-    if (client && currentUser) {
-      client.from('workouts').delete().eq('id', id).eq('user_id', currentUser.id).then(({ error }) => {
-        if (error) {
-          console.error('Cloud workout delete failed:', error.message);
-          showToast('Workout removed locally; cloud delete failed');
-        }
-      });
+    if (!client || !currentUser) {
+      showToast('Unable to connect to the workout database');
+      return;
     }
+    const { error } = await client.from('workouts').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) {
+      console.error('Cloud workout delete failed:', error);
+      showToast(`Could not delete workout: ${error.message}`);
+      return;
+    }
+    db.workouts = db.workouts.filter(w => String(w.id) !== String(id));
+    save();
+    closeModal('detail-modal');
+    renderHistory();
+    renderHome();
+    renderProgress();
   });
 }
 
@@ -1671,7 +2034,7 @@ function bucketValue(ws) {
   return ws.reduce((total, w) => {
     return total + (w.exercises||[]).reduce((sum, ex) => {
       if (ex.type !== 'strength') return sum;
-      if (progressMuscleFilter && !(MUSCLE_MAP[ex.name]||[]).includes(progressMuscleFilter)) return sum;
+      if (progressMuscleFilter && !musclesForExercise(ex).includes(progressMuscleFilter)) return sum;
       const doneSets = (ex.sets||[]).filter(s => s.done);
       if (progressVolMetric === 'kg') {
         return sum + doneSets.reduce((a, s) =>
@@ -1688,7 +2051,7 @@ function muscleValue(ws, muscle) {
   return ws.reduce((total, w) => {
     return total + (w.exercises||[]).reduce((sum, ex) => {
       if (ex.type !== 'strength') return sum;
-      if (!(MUSCLE_MAP[ex.name]||[]).includes(muscle)) return sum;
+      if (!musclesForExercise(ex).includes(muscle)) return sum;
       const doneSets = (ex.sets||[]).filter(s => s.done);
       if (progressVolMetric === 'kg') {
         return sum + doneSets.reduce((a, s) =>
@@ -1737,14 +2100,17 @@ function renderVolumeChart() {
 }
 
 // ── SPIDER CHART ────────────────────────────────────────────────────
-const SPIDER_MUSCLES = ['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Core','Calves'];
-
 function renderSpiderChart() {
   const buckets = getPeriodBuckets();
   const allWs = buckets.flatMap(b => workoutsInBucket(b));
 
   // Value per muscle (respects metric toggle, ignores global filter so spider always shows full picture)
   const vals = SPIDER_MUSCLES.map(m => muscleValue(allWs, m));
+  if (!SPIDER_MUSCLES.length) {
+    const legend = document.getElementById('spider-legend');
+    if (legend) legend.textContent = catalogLoading ? 'Loading muscle groups…' : 'Muscle group data unavailable';
+    return;
+  }
   const maxVal = Math.max(...vals, 1);
   const N = SPIDER_MUSCLES.length;
   const cx = 140, cy = 140, R = 100, levels = 4;
@@ -1852,7 +2218,7 @@ function renderMuscleVolumeByWeek() {
       if (t >= wkBucket.start && t < wkBucket.end) {
         (w.exercises||[]).forEach(ex => {
           if (ex.type !== 'strength') return;
-          (MUSCLE_MAP[ex.name]||[]).forEach(m => {
+          musclesForExercise(ex).forEach(m => {
             if (!(m in muscleWeekData)) return;
             const doneSets = (ex.sets||[]).filter(s => s.done);
             if (progressVolMetric === 'kg') {
@@ -1910,7 +2276,7 @@ function renderPRs() {
   if (!entries.length) { prl.innerHTML = '<div style="color:var(--text3);font-size:13px">No PRs yet.</div>'; return; }
   prl.innerHTML = entries.map(([ex, val]) => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:14px;font-weight:500">${ex}</div>
+      <div style="font-size:14px;font-weight:500">${escapeHtml(ex)}</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${val} <span style="font-size:13px;color:var(--text3);font-weight:400">kg est. 1RM</span></div>
     </div>`).join('');
 }
@@ -1920,7 +2286,6 @@ function renderPRs() {
 
 let plansState = { view: 'list', planId: null, workoutId: null };
 let editingPlanWorkout = null; // staged exercises while building a plan workout
-let planExType = 'strength';
 let dragSrcIdx = null;
 
 function renderPlans() {
@@ -2015,7 +2380,7 @@ function renderPlanDetail() {
 
         return `<div class="plan-ex-row">
           <div class="plan-ex-num">${i+1}</div>
-          <div class="plan-ex-name">${ex.name}</div>
+          <div class="plan-ex-name">${escapeHtml(ex.name)}<div style="font-size:10px;color:var(--text3);font-weight:400">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))}</div></div>
           <div class="plan-ex-detail">${ex.type === 'cardio'
             ? (ex.duration ? ex.duration + ' min' : 'Cardio')
             : (ex.setConfigs ? (ex.warmupSets ? '1W + ' : '') + ex.setConfigs.length + ' sets' : '')
@@ -2145,8 +2510,8 @@ function renderPlanExerciseList() {
         <span class="drag-handle">⠿</span>
         <div class="plan-ex-num">${i+1}</div>
         <div style="flex:1">
-          <div style="font-weight:600;font-size:14px;color:var(--text)">${ex.name}</div>
-          <div style="font-size:11px;color:var(--text3)">${summary}</div>
+          <div style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(ex.name)}</div>
+          <div style="font-size:11px;color:var(--text3)">${escapeHtml(exerciseCategoryLabel(exerciseCategory(ex)))} · ${summary}</div>
         </div>
         <button class="btn btn-xs btn-secondary" onclick="openPlanExerciseAdder(${i})">Edit</button>
         <button class="btn btn-xs btn-danger" onclick="removePlanEx(${i})">✕</button>
@@ -2177,6 +2542,8 @@ function savePlanWorkout() {
 
 let editingSetConfigs = []; // [{ mode:'reps'|'pct', repsMin, repsMax, pct1rm }]
 let editingExIdx = null;    // null = new, number = editing existing
+let planExCategory = 'strength';
+let planExType = 'strength';
 
 // Epley formula helpers
 function calc1RM(weight, reps) { return reps === 1 ? weight : Math.round(weight * (1 + reps / 30)); }
@@ -2191,18 +2558,21 @@ function getLatest1RM(exerciseName) {
 function openPlanExerciseAdder(editIdx) {
   editingExIdx = editIdx != null ? editIdx : null;
   const existing = editIdx != null ? editingPlanWorkout[editIdx] : null;
-  planExType = existing ? existing.type : 'strength';
+  const existingListing = existing
+    ? (existing.exerciseListingId ? catalogExerciseById(existing.exerciseListingId) : catalogExerciseByName(existing.name, existing.type))
+    : null;
+  planExCategory = existing?.category || existingListing?.category || existing?.type || 'strength';
+  planExType = exerciseTypeForCategory(planExCategory);
 
   document.getElementById('plan-ex-modal-title').textContent = existing ? 'Edit Exercise' : 'Add Exercise';
   const indicator = document.getElementById('plan-ex-edit-indicator');
   indicator.style.display = existing ? 'inline-flex' : 'none';
 
-  document.querySelectorAll('#plan-ex-type-pills .type-pill').forEach((p,i) => {
-    p.classList.toggle('selected', (i===0 && planExType==='strength') || (i===1 && planExType==='cardio'));
+  document.querySelectorAll('#plan-ex-type-pills .type-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.category === planExCategory);
   });
-  updatePlanExSelect();
-  if (existing) document.getElementById('plan-ex-select').value = existing.name;
-  document.getElementById('plan-ex-custom').value = '';
+  updatePlanExSelect(existingListing?.exercise_listing_id);
+  document.getElementById('plan-ex-custom').value = existing && !existingListing ? existing.name : '';
   document.getElementById('plan-ex-notes').value = existing ? (existing.notes || '') : '';
   document.getElementById('plan-ex-strength-fields').style.display = planExType === 'strength' ? 'block' : 'none';
   document.getElementById('plan-ex-cardio-fields').style.display = planExType === 'cardio' ? 'block' : 'none';
@@ -2235,7 +2605,8 @@ function adjustPlanSets(delta) {
 
 function refreshPlanExSets() {
   const custom = document.getElementById('plan-ex-custom').value.trim();
-  const name = custom || document.getElementById('plan-ex-select').value;
+  const selected = catalogExerciseById(document.getElementById('plan-ex-select').value);
+  const name = custom || selected?.name || '';
   const oneRM = getLatest1RM(name);
   const banner = document.getElementById('plan-ex-1rm-banner');
   if (oneRM) {
@@ -2287,7 +2658,8 @@ function renderSetConfigRows(exName, oneRM) {
 function setSetMode(i, mode) {
   editingSetConfigs[i].mode = mode;
   const custom = document.getElementById('plan-ex-custom').value.trim();
-  const name = custom || document.getElementById('plan-ex-select').value;
+  const selected = catalogExerciseById(document.getElementById('plan-ex-select').value);
+  const name = custom || selected?.name || '';
   renderSetConfigRows(name, getLatest1RM(name));
 }
 
@@ -2296,7 +2668,8 @@ function updateSetCfg(i, field, val) {
     ? parseFloat(val) || 0
     : val; // weight stored as string to allow empty
   const custom = document.getElementById('plan-ex-custom').value.trim();
-  const name = custom || document.getElementById('plan-ex-select').value;
+  const selected = catalogExerciseById(document.getElementById('plan-ex-select').value);
+  const name = custom || selected?.name || '';
   if (field === 'pct1rm') renderSetConfigRows(name, getLatest1RM(name));
 }
 
@@ -2305,24 +2678,39 @@ function cancelPlanEx() {
   closeModal('plan-ex-modal');
 }
 
-function addPlanExercise() {
+async function addPlanExercise() {
   const custom = document.getElementById('plan-ex-custom').value.trim();
-  const name = custom || document.getElementById('plan-ex-select').value;
-  let entry;
+  const selected = catalogExerciseById(document.getElementById('plan-ex-select').value);
+  const name = custom || selected?.name;
+  if (!name) {
+    showToast(catalogError ? 'Exercise catalog is unavailable' : 'Select or enter an exercise');
+    return;
+  }
   const notes = document.getElementById('plan-ex-notes').value.trim();
-  if (planExType === 'strength') {
-    entry = { name, type: 'strength', notes, warmupSets: 1, setConfigs: JSON.parse(JSON.stringify(editingSetConfigs)) };
-  } else {
-    entry = { name, type: 'cardio', notes, duration: parseInt(document.getElementById('plan-ex-duration').value) || 30 };
+  try {
+    const listing = await ensureExerciseListing(
+      name, planExType, custom ? null : selected?.exercise_listing_id, planExCategory
+    );
+    const entry = planExType === 'strength'
+      ? {
+        exerciseListingId: listing.exercise_listing_id, name: listing.name, type: 'strength',
+        category: listing.category || planExCategory,
+        notes, warmupSets: 1, setConfigs: JSON.parse(JSON.stringify(editingSetConfigs))
+      }
+      : {
+        exerciseListingId: listing.exercise_listing_id, name: listing.name, type: 'cardio',
+        category: listing.category || 'cardio',
+        notes, duration: parseInt(document.getElementById('plan-ex-duration').value, 10) || 30
+      };
+    if (editingExIdx != null) editingPlanWorkout[editingExIdx] = entry;
+    else editingPlanWorkout.push(entry);
+    editingExIdx = null;
+    closeModal('plan-ex-modal');
+    renderPlanExerciseList();
+  } catch (error) {
+    console.error('Could not add plan exercise:', error);
+    showToast(`Could not add exercise: ${error.message || 'Please try again'}`);
   }
-  if (editingExIdx != null) {
-    editingPlanWorkout[editingExIdx] = entry;
-  } else {
-    editingPlanWorkout.push(entry);
-  }
-  editingExIdx = null;
-  closeModal('plan-ex-modal');
-  renderPlanExerciseList();
 }
 
 function removePlanEx(i) {
@@ -2330,19 +2718,33 @@ function removePlanEx(i) {
   renderPlanExerciseList();
 }
 
-function selectPlanExType(type, el) {
-  planExType = type;
-  document.querySelectorAll('#plan-ex-type-pills .type-pill').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
+function selectPlanExCategory(category, el) {
+  planExCategory = category;
+  planExType = exerciseTypeForCategory(category);
+  document.querySelectorAll('#plan-ex-type-pills .type-pill').forEach(p =>
+    p.classList.toggle('selected', p === el)
+  );
   updatePlanExSelect();
-  document.getElementById('plan-ex-strength-fields').style.display = type === 'strength' ? 'block' : 'none';
-  document.getElementById('plan-ex-cardio-fields').style.display = type === 'cardio' ? 'block' : 'none';
+  document.getElementById('plan-ex-strength-fields').style.display = planExType === 'strength' ? 'block' : 'none';
+  document.getElementById('plan-ex-cardio-fields').style.display = planExType === 'cardio' ? 'block' : 'none';
   refreshPlanExSets();
 }
 
-function updatePlanExSelect() {
-  const list = planExType === 'strength' ? STRENGTH_EXERCISES : CARDIO_EXERCISES;
-  document.getElementById('plan-ex-select').innerHTML = list.map(e => `<option>${e}</option>`).join('');
+function updatePlanExSelect(selectedId) {
+  const select = document.getElementById('plan-ex-select');
+  const entries = exerciseCategoryEntries(planExType, planExCategory, selectedId);
+  if (catalogLoading) {
+    select.innerHTML = '<option value="">Loading exercises…</option>';
+    return;
+  }
+  if (catalogError && !entries.length) {
+    select.innerHTML = '<option value="">Exercise catalog unavailable</option>';
+    return;
+  }
+  select.innerHTML = entries.length
+    ? entries.map(ex => `<option value="${ex.exercise_listing_id}">${escapeHtml(ex.name)}</option>`).join('')
+    : '<option value="">No exercises available</option>';
+  if (selectedId && entries.some(ex => ex.exercise_listing_id === selectedId)) select.value = selectedId;
 }
 
 // ── DRAG TO REORDER ────────────────────────────────────────────────────
@@ -2371,8 +2773,17 @@ function startPlanWorkout(planId, workoutId) {
   const doStart = () => {
     createWorkout(wk.name);
     wk.exercises.forEach(ex => {
+      const listing = ex.exerciseListingId
+        ? catalogExerciseById(ex.exerciseListingId)
+        : catalogExerciseByName(ex.name, ex.type);
+      const category = ex.category || listing?.category || ex.type || 'strength';
       if (ex.type === 'cardio') {
-        db.activeWorkout.exercises.push({ id: Date.now() + Math.random(), name: ex.name, type: 'cardio', duration: String(ex.duration||''), distance: '', calories: '' });
+        db.activeWorkout.exercises.push({
+          id: Date.now() + Math.random(),
+          exerciseListingId: listing?.exercise_listing_id || ex.exerciseListingId,
+          name: ex.name, type: 'cardio', category, completed: false,
+          duration: String(ex.duration||''), distance: '', calories: ''
+        });
       } else {
         const oneRM = getLatest1RM(ex.name);
         const configs = ex.setConfigs || [];
@@ -2394,7 +2805,11 @@ function startPlanWorkout(planId, workoutId) {
         const sets = [...warmupLogSets, ...workingSets];
         // Fallback if no setConfigs (legacy)
         const finalSets = sets.length ? sets : Array.from({ length: ex.sets || 3 }, () => ({ reps: '', weight: '', done: false }));
-        db.activeWorkout.exercises.push({ id: Date.now() + Math.random(), name: ex.name, type: 'strength', sets: finalSets });
+        db.activeWorkout.exercises.push({
+          id: Date.now() + Math.random(),
+          exerciseListingId: listing?.exercise_listing_id || ex.exerciseListingId,
+          name: ex.name, type: 'strength', category, sets: finalSets
+        });
       }
     });
     save();
