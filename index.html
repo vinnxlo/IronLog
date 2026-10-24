@@ -20,15 +20,38 @@
     --bg4: #1e2730;
     --accent: #C6FF33;
     --accent2: #00e5ff;
-    --accent-dim: rgba(198,255,51,0.12);
+    --accent-text: var(--accent);
+    --accent-foreground: #080b0f;
+    --accent-pill-foreground: #0e0e0e;
+    --accent-hover: color-mix(in srgb, var(--accent) 80%, white);
+    --accent-dim: color-mix(in srgb, var(--accent) 12%, transparent);
+    --accent-tag-bg: var(--accent-dim);
+    --accent-chart-selected: color-mix(in srgb, var(--accent) 28%, transparent);
     --text: #eef2f0;
-    --text2: #8a9a8e;
-    --text3: #455048;
+    --text2: #b8c5bc;
+    --text3: #92b69c;
     --border: #1a2420;
     --border2: #263030;
     --success: #00e090;
     --danger: #ff3d5a;
-    --info: #00e5ff;
+    --info: var(--accent2);
+    --stat-accent-bg: rgba(245,166,35,0.05);
+    --placeholder-text: #878787;
+    --modal-overlay: rgba(0,0,0,0.7);
+    --desktop-shadow: rgba(0,0,0,0.5);
+    --chart-grid: var(--border);
+    --chart-label: var(--text3);
+    --chart-fill: var(--accent-dim);
+    --chart-axis-font-size: clamp(10px, 2.8vw, 12px);
+    --chart-category-font-size: clamp(11px, 3.2vw, 13px);
+    --chart-value-font-size: clamp(11px, 3vw, 13px);
+    --chart-legend-font-size: clamp(11px, 3vw, 12px);
+    --chart-series-1: #f5a623;
+    --chart-series-2: #5b9cf6;
+    --chart-series-3: #4caf87;
+    --chart-series-4: #ff6b35;
+    --chart-series-5: #c97df5;
+    --chart-series-fallback: #888;
     --card-r: 12px;
     --nav-h: 68px;
   }
@@ -55,7 +78,7 @@
   #header h1 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 26px; font-weight: 800; letter-spacing: 1px;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   #header .tagline { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; }
   #header .streak-badge {
@@ -64,7 +87,7 @@
     border-radius: 24px;
     padding: 6px 14px;
     display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: var(--accent);
+    font-size: 13px; font-weight: 600; color: var(--accent-text);
   }
   #main { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--nav-h) + 8px); }
   #nav {
@@ -83,7 +106,7 @@
   }
   .nav-btn .nav-icon { font-size: 22px; }
   .nav-btn .nav-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
-  .nav-btn.active { color: var(--accent); }
+  .nav-btn.active { color: var(--accent-text); }
   .nav-btn:active { transform: scale(0.92); }
 
   /* SECTIONS */
@@ -116,8 +139,11 @@
   .stat-label { font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
   .stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); }
   .stat-value span { font-size: 14px; font-weight: 400; color: var(--text2); margin-left: 2px; }
-  .stat-card.accent { border-color: var(--accent); background: rgba(245,166,35,0.05); }
-  .stat-card.accent .stat-value { color: var(--accent); }
+  .home-stats-grid .stat-card { display: flex; flex-direction: column; }
+  .home-stats-grid .stat-label { min-height: 2.4em; }
+  .home-stats-grid .stat-value { margin-top: auto; line-height: 1; white-space: nowrap; }
+  .stat-card.accent { border-color: var(--accent); background: var(--stat-accent-bg); }
+  .stat-card.accent .stat-value { color: var(--accent-text); }
 
   /* BUTTONS */
   .btn {
@@ -127,12 +153,12 @@
     cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px;
   }
   .btn:active { transform: scale(0.96); }
-  .btn-primary { background: var(--accent); color: #080b0f; }
-  .btn-primary:hover { background: #d4ff55; }
+  .btn-primary { background: var(--accent); color: var(--accent-foreground); }
+  .btn-primary:hover { background: var(--accent-hover); }
   .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
   .btn-secondary:hover { background: var(--bg4); }
-  .btn-danger { background: rgba(255,61,90,0.13); color: var(--danger); border: 1px solid rgba(255,61,90,0.28); }
-  .btn-success { background: rgba(0,224,144,0.12); color: var(--success); border: 1px solid rgba(0,224,144,0.28); }
+  .btn-danger { background: color-mix(in srgb, var(--danger) 13%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent); }
+  .btn-success { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 28%, transparent); }
   .btn-block { width: 100%; display: flex; margin-bottom: 10px; }
   .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
   .btn-xs { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
@@ -140,8 +166,8 @@
   /* BIG START BUTTON */
   .btn-start {
     width: 100%; padding: 18px; border-radius: 14px; border: none;
-    background: linear-gradient(120deg, #C6FF33 0%, #00e5ff 100%);
-    color: #080b0f;
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent2) 100%);
+    color: var(--accent-foreground);
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 22px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase;
     cursor: pointer; transition: all 0.15s;
@@ -159,7 +185,13 @@
     -webkit-appearance: none; appearance: none;
   }
   input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a09a90' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%);
+    background-repeat: no-repeat;
+    background-position: calc(100% - 18px) 50%, calc(100% - 14px) 50%;
+    background-size: 4px 4px;
+    padding-right: 36px;
+  }
   select option { background: var(--bg3); }
   label { font-size: 12px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 6px; }
   .form-group { margin-bottom: 14px; }
@@ -172,7 +204,7 @@
     font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600;
     cursor: pointer; text-align: center; transition: all 0.15s;
   }
-  .type-pill.selected { background: var(--accent); color: #0e0e0e; border-color: var(--accent); }
+  .type-pill.selected { background: var(--accent); color: var(--accent-pill-foreground); border-color: var(--accent); }
 
   /* EXERCISE ITEM */
   .exercise-item {
@@ -188,8 +220,8 @@
     font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
     padding: 3px 8px; border-radius: 4px;
   }
-  .tag-strength { background: rgba(198,255,51,0.12); color: var(--accent); }
-  .tag-cardio { background: rgba(0,229,255,0.12); color: var(--info); }
+  .tag-strength { background: var(--accent-tag-bg); color: var(--accent-text); }
+  .tag-cardio { background: color-mix(in srgb, var(--info) 12%, transparent); color: var(--info); }
 
   /* SETS TABLE */
   .sets-header {
@@ -214,7 +246,7 @@
     background: var(--bg4); cursor: pointer; display: flex; align-items: center;
     justify-content: center; font-size: 16px; transition: all 0.15s; color: transparent;
   }
-  .set-done.checked { background: var(--success); border-color: var(--success); color: #080b0f; }
+  .set-done.checked { background: var(--success); border-color: var(--success); color: var(--accent-foreground); }
   .cardio-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .cardio-fields .form-group { margin-bottom: 0; }
 
@@ -238,7 +270,7 @@
   /* TIMER */
   #timer-display {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 48px; font-weight: 800; color: var(--accent);
+    font-size: 48px; font-weight: 800; color: var(--accent-text);
     text-align: center; letter-spacing: 2px;
   }
 
@@ -270,11 +302,11 @@
   }
   #active-banner.show { display: flex; }
   #active-banner .ab-info { font-size: 13px; color: var(--text2); }
-  #active-banner .ab-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent); }
+  #active-banner .ab-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-text); }
 
   /* MODAL */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    position: fixed; inset: 0; background: var(--modal-overlay);
     display: none; align-items: flex-end; justify-content: center;
     z-index: 200; padding: 0;
   }
@@ -308,7 +340,7 @@
   .muscle-bar-val { font-size: 12px; color: var(--text3); min-width: 50px; text-align: right; }
 
   /* SUGGESTED SET PLACEHOLDER — muted, same as unfilled text */
-  .set-row input.has-sug::placeholder { color: #878787; opacity: 1; font-style: italic; }
+  .set-row input.has-sug::placeholder { color: var(--placeholder-text); opacity: 1; font-style: italic; }
 
   /* PER-SET CONFIG */
   .set-cfg-block {
@@ -319,12 +351,12 @@
   .set-cfg-num { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--text3); }
   .mode-toggle { display:flex; background:var(--bg4); border-radius:8px; padding:2px; gap:2px; }
   .mode-btn { padding:4px 12px; border-radius:6px; border:none; background:none; color:var(--text3); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; letter-spacing:0.5px; }
-  .mode-btn.active { background:var(--accent); color:#080b0f; }
+  .mode-btn.active { background:var(--accent); color:var(--accent-foreground); }
   .set-cfg-reps { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .set-cfg-pct { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .set-cfg-est { margin-top:8px; background:var(--bg4); border-radius:6px; padding:7px 10px; display:flex; align-items:center; justify-content:space-between; }
   .set-cfg-est-label { font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; }
-  .set-cfg-est-val { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--accent); }
+  .set-cfg-est-val { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--accent-text); }
 
   /* PLAN DETAIL EXPANDED SET ROWS */
   .plan-set-detail {
@@ -333,7 +365,7 @@
   }
   .plan-set-detail .psd-num { color:var(--text3); min-width:36px; font-weight:600; }
   .plan-set-detail .psd-config { flex:1; color:var(--text2); }
-  .plan-set-detail .psd-est { color:var(--accent); font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; }
+  .plan-set-detail .psd-est { color:var(--accent-text); font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; }
 
   /* PLANS */
   .plan-folder {
@@ -361,7 +393,7 @@
   .plan-ex-name { flex: 1; font-weight: 500; color: var(--text); }
   .plan-ex-detail { font-size: 11px; color: var(--text3); white-space: nowrap; }
   .drag-handle { color: var(--text3); font-size: 16px; cursor: grab; padding: 0 4px; user-select: none; }
-  .drag-over { border: 1px dashed var(--accent) !important; background: rgba(198,255,51,0.05) !important; }
+  .drag-over { border: 1px dashed var(--accent) !important; background: color-mix(in srgb, var(--accent) 5%, transparent) !important; }
 
   /* CALENDAR */
   .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
@@ -372,10 +404,10 @@
   .cal-dow { font-size:10px; font-weight:600; color:var(--text3); text-align:center; letter-spacing:1px; text-transform:uppercase; padding-bottom:6px; }
   .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text2); position:relative; border-radius:50%; cursor:default; }
   .cal-day.other-month { color:var(--text3); opacity:0.4; }
-  .cal-day.has-workout { font-weight:700; color:var(--accent); }
+  .cal-day.has-workout { font-weight:700; color:var(--accent-text); }
   .cal-day.has-workout::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:4px; height:4px; background:var(--accent); border-radius:50%; }
   .cal-day.is-today { background:var(--bg3); color:var(--text); font-weight:600; }
-  .cal-day.has-workout.is-today { color:var(--accent); }
+  .cal-day.has-workout.is-today { color:var(--accent-text); }
 
   /* SCROLLBAR */
   #main::-webkit-scrollbar { width: 3px; }
@@ -394,7 +426,7 @@
 
   /* RESPONSIVE for desktop */
   @media (min-width: 600px) {
-    #app { max-width: 520px; box-shadow: 0 0 60px rgba(0,0,0,0.5); min-height: 100dvh; }
+    #app { max-width: 520px; box-shadow: 0 0 60px var(--desktop-shadow); min-height: 100dvh; }
     .stats-grid { grid-template-columns: repeat(4, 1fr); }
   }
   @media (prefers-color-scheme: light) {
@@ -402,15 +434,10 @@
       --bg: #f0f4f0; --bg2: #ffffff; --bg3: #e8f0e8; --bg4: #dceadc;
       --text: #0a1a0e; --text2: #3d5a42; --text3: #8aaa8e;
       --border: #ccdacc; --border2: #b8ccb8;
+      --accent-text: color-mix(in srgb, var(--accent) 40%, var(--text));
+      --accent-foreground: #0a1a0e;
+      --accent-tag-bg: color-mix(in srgb, var(--accent) 20%, transparent);
     }
-    .btn-primary { color: #0a1a0e; }
-    .btn-start { color: #0a1a0e; }
-    #header h1 { color: #5a9900; }
-    .stat-card.accent .stat-value { color: #5a9900; }
-    .nav-btn.active { color: #5a9900; }
-    #timer-display { color: #5a9900; }
-    .tag-strength { color: #5a9900; background: rgba(198,255,51,0.2); }
-    #active-banner .ab-name { color: #5a9900; }
   }
 </style>
 <!-- Mobile Debugging Console -->
@@ -451,7 +478,7 @@
         </div>
       </div>
 
-      <div class="stats-grid">
+      <div class="stats-grid home-stats-grid">
         <div class="stat-card accent">
           <div class="stat-label">This Week</div>
           <div class="stat-value" id="stat-week">0 <span>sessions</span></div>
@@ -555,18 +582,18 @@
         <button id="vol-clear-btn" class="btn btn-xs btn-secondary" onclick="clearMuscleFilter()" style="display:none">✕ Clear filter</button>
       </div>
       <div class="card" style="padding-bottom:12px">
-        <div id="volume-bars" style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-bottom:6px"></div>
-        <div id="vol-labels" style="display:flex;font-size:9px;color:var(--text3)"></div>
+        <div id="volume-bars" style="display:flex;align-items:flex-end;gap:3px;height:92px;margin-bottom:6px"></div>
+        <div id="vol-labels" style="display:flex;font-size:var(--chart-axis-font-size);color:var(--text3)"></div>
       </div>
 
       <!-- SPIDER CHART — click a muscle to filter all charts -->
       <div class="section-header">
         <span>Activity Distribution</span>
-        <span style="font-size:10px;color:var(--text3);letter-spacing:0;text-transform:none;font-weight:400">tap muscle to filter</span>
+        <span style="font-size:var(--chart-legend-font-size);color:var(--text3);letter-spacing:0;text-transform:none;font-weight:400">tap muscle to filter</span>
       </div>
       <div class="card" style="display:flex;flex-direction:column;align-items:center;padding:16px 8px 12px">
         <svg id="spider-svg" viewBox="0 0 280 280" width="100%" style="max-width:280px;overflow:visible"></svg>
-        <div id="spider-legend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;margin-top:10px;font-size:11px;color:var(--text2)"></div>
+        <div id="spider-legend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;margin-top:10px;font-size:var(--chart-legend-font-size);color:var(--text2)"></div>
       </div>
 
 
@@ -740,7 +767,7 @@
     <div class="modal-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div class="modal-title" style="margin-bottom:0" id="plan-ex-modal-title">Add Exercise</div>
-      <button class="btn btn-xs btn-secondary" id="plan-ex-edit-indicator" style="display:none;pointer-events:none;color:var(--accent);border-color:var(--accent)">Editing</button>
+      <button class="btn btn-xs btn-secondary" id="plan-ex-edit-indicator" style="display:none;pointer-events:none;color:var(--accent-text);border-color:var(--accent)">Editing</button>
     </div>
     <div class="type-pills" id="plan-ex-type-pills" style="flex-wrap:wrap">
       <div class="type-pill selected" data-category="strength" onclick="selectPlanExCategory('strength',this)">💪 Strength</div>
@@ -768,9 +795,9 @@
         </div>
       </div>
       <!-- 1RM reference banner -->
-      <div id="plan-ex-1rm-banner" style="display:none;background:var(--accent-dim);border:1px solid rgba(198,255,51,0.25);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;display:none;align-items:center;justify-content:space-between">
+      <div id="plan-ex-1rm-banner" style="display:none;background:var(--accent-dim);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;display:none;align-items:center;justify-content:space-between">
         <span style="color:var(--text2)">Latest est. 1RM</span>
-        <span id="plan-ex-1rm-val" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">–</span>
+        <span id="plan-ex-1rm-val" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent-text)">–</span>
       </div>
       <!-- Per-set config rows -->
       <div id="plan-ex-sets-container"></div>
@@ -2090,7 +2117,7 @@ function renderVolumeChart() {
       ? (progressVolMetric === 'kg' ? Math.round(d.value) + ' kg' : d.value + ' sets')
       : '';
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:80px;gap:3px">
-      ${tip ? `<div style="font-size:8px;color:var(--accent);font-weight:600;line-height:1">${tip}</div>` : ''}
+      ${tip ? `<div style="font-size:var(--chart-value-font-size);color:var(--chart-label);font-weight:600;line-height:1">${tip}</div>` : ''}
       <div style="width:100%;height:${h}px;background:${d.value?'var(--accent)':'var(--bg4)'};border-radius:3px 3px 0 0"></div>
     </div>`;
   }).join('');
@@ -2112,30 +2139,29 @@ function renderSpiderChart() {
     return;
   }
   const maxVal = Math.max(...vals, 1);
+  const scaleValue = v => progressVolMetric === 'kg'
+    ? Math.log10(v + 1) / Math.log10(maxVal + 1)
+    : v / maxVal;
   const N = SPIDER_MUSCLES.length;
   const cx = 140, cy = 140, R = 100, levels = 4;
   const angle  = i => (Math.PI * 2 * i / N) - Math.PI / 2;
   const pt     = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
 
-  const gridCol    = '#1a2420';
-  const textColDim = '#455048';
-  const textColOn  = '#C6FF33';
-  const fillNorm   = 'rgba(198,255,51,0.12)';
-  const fillSel    = 'rgba(198,255,51,0.28)';
-  const strokeCol  = '#C6FF33';
+  const gridCol    = 'var(--chart-grid)';
+  const textColDim = 'var(--chart-label)';
+  const textColOn  = 'var(--accent-text)';
+  const fillNorm   = 'var(--chart-fill)';
+  const fillSel    = 'var(--accent-chart-selected)';
+  const strokeCol  = 'var(--accent)';
   const unitLabel  = progressVolMetric === 'kg' ? 'kg' : 'sets';
 
   let svg = `<svg id="spider-svg" viewBox="0 0 280 280" width="100%" style="max-width:280px;overflow:visible;cursor:pointer">`;
 
-  // Grid rings + level value labels
+  // Grid rings
   for (let lv = 1; lv <= levels; lv++) {
     const r = R * lv / levels;
     const pts = SPIDER_MUSCLES.map((_,i) => pt(i,r).join(',')).join(' ');
     svg += `<polygon points="${pts}" fill="none" stroke="${gridCol}" stroke-width="0.8"/>`;
-    // label on top axis
-    const [lx, ly] = pt(0, r);
-    const lvVal = Math.round(maxVal * lv / levels);
-    svg += `<text x="${lx+4}" y="${ly}" font-size="7" fill="${textColDim}" font-family="Barlow,sans-serif">${lvVal}</text>`;
   }
   // Axes
   SPIDER_MUSCLES.forEach((_,i) => {
@@ -2143,13 +2169,13 @@ function renderSpiderChart() {
     svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${gridCol}" stroke-width="0.8"/>`;
   });
   // Data polygon
-  const dataPts = vals.map((v,i) => pt(i, R * Math.min(v/maxVal, 1) * 0.98).join(',')).join(' ');
+  const dataPts = vals.map((v,i) => pt(i, R * Math.min(scaleValue(v), 1) * 0.98).join(',')).join(' ');
   const isFiltered = !!progressMuscleFilter;
   svg += `<polygon points="${dataPts}" fill="${isFiltered ? fillSel : fillNorm}" stroke="${strokeCol}" stroke-width="2" stroke-linejoin="round" pointer-events="none"/>`;
 
   // Data dots + label hit areas per muscle
   SPIDER_MUSCLES.forEach((m, i) => {
-    const [dx, dy] = pt(i, R * Math.min(vals[i]/maxVal, 1) * 0.98);
+    const [dx, dy] = pt(i, R * Math.min(scaleValue(vals[i]), 1) * 0.98);
     const [lx, ly] = pt(i, R + 22);
     const anchor   = lx < cx - 4 ? 'end' : lx > cx + 4 ? 'start' : 'middle';
     const isActive = progressMuscleFilter === m;
@@ -2158,8 +2184,8 @@ function renderSpiderChart() {
 
     // Invisible hit-area rect around label (easier to tap)
     svg += `<g onclick="setMuscleFilter('${m}')" style="cursor:pointer">
-      <rect x="${lx - 26}" y="${ly - 10}" width="52" height="14" fill="transparent" rx="4"/>
-      <text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="${isActive?10:9}" font-family="Barlow,sans-serif" fill="${col}" font-weight="${isActive?700:600}">${m}</text>
+      <rect x="${lx - 36}" y="${ly - 12}" width="72" height="18" fill="transparent" rx="4"/>
+      <text x="${lx}" y="${ly+4}" text-anchor="${anchor}" style="font-size:var(--chart-category-font-size)" font-family="Barlow,sans-serif" fill="${col}" font-weight="${isActive?700:600}">${m}</text>
     </g>`;
     // Dot
     if (vals[i] > 0) {
@@ -2178,8 +2204,8 @@ function renderSpiderChart() {
       legend.innerHTML = `<span style="color:var(--text3)">No strength data for this period</span>`;
     } else {
       legend.innerHTML = progressMuscleFilter
-        ? `<span style="color:var(--text2);font-size:11px">Filtering by <strong style="color:var(--accent)">${progressMuscleFilter}</strong> — ${progressVolMetric === 'kg' ? Math.round(vals[SPIDER_MUSCLES.indexOf(progressMuscleFilter)]) + ' kg' : vals[SPIDER_MUSCLES.indexOf(progressMuscleFilter)] + ' sets'} this period</span>`
-        : `<span style="color:var(--text3);font-size:10px">Tap a muscle label to filter all charts</span>`;
+        ? `<span style="color:var(--text2);font-size:var(--chart-legend-font-size)">Filtering by <strong style="color:var(--accent-text)">${progressMuscleFilter}</strong> — ${progressVolMetric === 'kg' ? Math.round(vals[SPIDER_MUSCLES.indexOf(progressMuscleFilter)]) + ' kg' : vals[SPIDER_MUSCLES.indexOf(progressMuscleFilter)] + ' sets'} this period</span>`
+        : `<span style="color:var(--text3);font-size:var(--chart-legend-font-size)">Tap a muscle label to filter all charts</span>`;
     }
   }
 }
@@ -2241,21 +2267,27 @@ function renderMuscleVolumeByWeek() {
 
   const wkLabels = weeks.map(w => w.label);
   const maxVal = Math.max(...muscles.flatMap(m => muscleWeekData[m]), 1);
-  const weekColors = ['#f5a623','#5b9cf6','#4caf87','#ff6b35','#c97df5'];
+  const weekColors = [
+    'var(--chart-series-1)',
+    'var(--chart-series-2)',
+    'var(--chart-series-3)',
+    'var(--chart-series-4)',
+    'var(--chart-series-5)'
+  ];
   const unit = progressVolMetric === 'kg' ? ' kg' : ' sets';
 
   card.innerHTML = `
     <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      ${wkLabels.map((l,i) => `<span style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${weekColors[i]||'#888'};display:inline-block"></span>${l}</span>`).join('')}
+      ${wkLabels.map((l,i) => `<span style="font-size:var(--chart-axis-font-size);color:var(--text2);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${weekColors[i]||'var(--chart-series-fallback)'};display:inline-block"></span>${l}</span>`).join('')}
     </div>
     ${muscles.map(m => `
       <div style="margin-bottom:12px;cursor:pointer" onclick="setMuscleFilter('${m}')">
-        <div style="font-size:12px;color:${progressMuscleFilter===m?'var(--accent)':'var(--text2)'};margin-bottom:4px;font-weight:${progressMuscleFilter===m?700:500}">${m}</div>
+        <div style="font-size:var(--chart-category-font-size);color:${progressMuscleFilter===m?'var(--accent-text)':'var(--text2)'};margin-bottom:4px;font-weight:${progressMuscleFilter===m?700:500}">${m}</div>
         <div style="display:flex;gap:3px;align-items:flex-end;height:30px">
           ${muscleWeekData[m].map((v,wi) => {
             const h = Math.max(Math.round((v/maxVal)*26), v?2:0);
             const tip = v ? (progressVolMetric==='kg' ? Math.round(v)+' kg' : v+' sets') : '0';
-            return `<div style="flex:1;height:${h}px;background:${weekColors[wi]||'#888'};border-radius:2px 2px 0 0;opacity:${v?1:0.15}" title="${wkLabels[wi]}: ${tip}"></div>`;
+            return `<div style="flex:1;height:${h}px;background:${weekColors[wi]||'var(--chart-series-fallback)'};border-radius:2px 2px 0 0;opacity:${v?1:0.15}" title="${wkLabels[wi]}: ${tip}"></div>`;
           }).join('')}
         </div>
       </div>`).join('')}`;
@@ -2277,7 +2309,7 @@ function renderPRs() {
   prl.innerHTML = entries.map(([ex, val]) => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="font-size:14px;font-weight:500">${escapeHtml(ex)}</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${val} <span style="font-size:13px;color:var(--text3);font-weight:400">kg est. 1RM</span></div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent-text)">${val} <span style="font-size:13px;color:var(--text3);font-weight:400">kg est. 1RM</span></div>
     </div>`).join('');
 }
 
@@ -2432,7 +2464,7 @@ function renderPlanWorkoutExercises(workout) {
         ? (ex.duration ? ex.duration + ' min' : 'Cardio')
         : (ex.setConfigs ? (ex.warmupSets ? '1W + ' : '') + ex.setConfigs.length + ' sets' : '')
       }</div>
-      ${oneRM ? `<div style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">1RM ${oneRM}kg</div>` : ''}
+      ${oneRM ? `<div style="font-size:10px;color:var(--accent-text);font-weight:600;white-space:nowrap">1RM ${oneRM}kg</div>` : ''}
     </div>
     ${warmupHtml}
     ${setsHtml}
