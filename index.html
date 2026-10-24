@@ -176,7 +176,7 @@
   .btn-start:active { transform: scale(0.97); }
 
   /* FORM ELEMENTS */
-  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
+  input[type=text], input[type=email], input[type=password], input[type=number], input[type=search], select, textarea {
     width: 100%; padding: 11px 14px;
     background: var(--bg3); border: 1px solid var(--border2);
     border-radius: 8px; color: var(--text);
@@ -184,7 +184,7 @@
     outline: none; transition: border-color 0.15s;
     -webkit-appearance: none; appearance: none;
   }
-  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, input[type=search]:focus, select:focus { border-color: var(--accent); }
   select {
     background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%);
     background-repeat: no-repeat;
@@ -195,6 +195,35 @@
   select option { background: var(--bg3); }
   label { font-size: 12px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 6px; }
   .form-group { margin-bottom: 14px; }
+  .exercise-picker { position: relative; }
+  .exercise-picker-trigger {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 8px; color: var(--text); font: 15px 'Barlow', sans-serif;
+    text-align: left; cursor: pointer;
+  }
+  .exercise-picker-trigger:focus, .exercise-picker.open .exercise-picker-trigger { border-color: var(--accent); outline: none; }
+  .exercise-picker-trigger::after { content: ''; width: 0; height: 0; margin-left: 10px; border: 5px solid transparent; border-top-color: var(--text3); transform: translateY(2px); }
+  .exercise-picker-menu {
+    position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 20;
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45); overflow: hidden;
+  }
+  .exercise-picker-menu[hidden] { display: none; }
+  .exercise-picker-search {
+    width: 100%; border: 0 !important; border-bottom: 1px solid var(--border2) !important;
+    border-radius: 0 !important; background: var(--bg2) !important;
+  }
+  .exercise-picker-options { max-height: 190px; overflow-y: auto; padding: 4px; }
+  .exercise-picker-option {
+    display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 5px;
+    background: transparent; color: var(--text); font: 14px 'Barlow', sans-serif;
+    text-align: left; cursor: pointer;
+  }
+  .exercise-picker-option:hover, .exercise-picker-option:focus, .exercise-picker-option[aria-selected="true"] {
+    background: var(--bg4); outline: none;
+  }
+  .exercise-picker-empty { padding: 10px; color: var(--text3); font-size: 13px; }
 
   /* EXERCISE TYPE PILLS */
   .type-pills { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -674,9 +703,22 @@
       <div class="type-pill" data-category="plyometrics" onclick="selectExCategory('plyometrics',this)">⚡ Plyo</div>
       <div class="type-pill" data-category="cardio" onclick="selectExCategory('cardio',this)">🏃 Cardio</div>
     </div>
+    <div class="form-group" id="ex-muscle-filter">
+      <label for="ex-muscle-select">Muscle Group</label>
+      <select id="ex-muscle-select" onchange="selectExMuscleFilter(this.value)">
+        <option value="">All muscle groups</option>
+      </select>
+    </div>
     <div class="form-group">
-      <label>Exercise</label>
-      <select id="ex-select"></select>
+      <label for="ex-picker-trigger">Exercise</label>
+      <div class="exercise-picker" id="ex-picker">
+        <button type="button" class="exercise-picker-trigger" id="ex-picker-trigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleExercisePicker('ex')"><span id="ex-picker-value">Select exercise</span></button>
+        <div class="exercise-picker-menu" id="ex-picker-menu" hidden>
+          <input type="search" class="exercise-picker-search" id="ex-search" placeholder="Search exercises…" autocomplete="off" aria-label="Search exercises" oninput="searchExExercises(this.value)" onkeydown="handleExercisePickerKeydown('ex',event)">
+          <div class="exercise-picker-options" id="ex-picker-options" role="listbox" aria-label="Exercises"></div>
+        </div>
+        <select id="ex-select" hidden></select>
+      </div>
     </div>
     <div class="form-group">
       <label>Or type custom name</label>
@@ -775,9 +817,22 @@
       <div class="type-pill" data-category="plyometrics" onclick="selectPlanExCategory('plyometrics',this)">⚡ Plyo</div>
       <div class="type-pill" data-category="cardio" onclick="selectPlanExCategory('cardio',this)">🏃 Cardio</div>
     </div>
+    <div class="form-group" id="plan-ex-muscle-filter">
+      <label for="plan-ex-muscle-select">Muscle Group</label>
+      <select id="plan-ex-muscle-select" onchange="selectPlanExMuscleFilter(this.value)">
+        <option value="">All muscle groups</option>
+      </select>
+    </div>
     <div class="form-group">
-      <label>Exercise</label>
-      <select id="plan-ex-select" onchange="refreshPlanExSets()"></select>
+      <label for="plan-ex-picker-trigger">Exercise</label>
+      <div class="exercise-picker" id="plan-ex-picker">
+        <button type="button" class="exercise-picker-trigger" id="plan-ex-picker-trigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleExercisePicker('plan-ex')"><span id="plan-ex-picker-value">Select exercise</span></button>
+        <div class="exercise-picker-menu" id="plan-ex-picker-menu" hidden>
+          <input type="search" class="exercise-picker-search" id="plan-ex-search" placeholder="Search exercises…" autocomplete="off" aria-label="Search exercises" oninput="searchPlanExExercises(this.value)" onkeydown="handleExercisePickerKeydown('plan-ex',event)">
+          <div class="exercise-picker-options" id="plan-ex-picker-options" role="listbox" aria-label="Exercises"></div>
+        </div>
+        <select id="plan-ex-select" hidden onchange="refreshPlanExSets()"></select>
+      </div>
     </div>
     <div class="form-group">
       <label>Or type custom name</label>
@@ -871,6 +926,8 @@ let db = { workouts: [], activeWorkout: null, plans: [], prs: {} };
 let timerInterval = null;
 let currentExType = 'strength';
 let currentExCategory = 'strength';
+let currentExMuscleFilter = '';
+let currentExSearch = '';
 let currentUser = null;
 let authReady = false;
 let exerciseCatalog = [];
@@ -1393,11 +1450,13 @@ function _quickStartLoad(name) {
   const tpl = TEMPLATES.find(t => t.name === name);
   if (tpl && tpl.exercises.length) {
     tpl.exercises.forEach(ex => {
+      const listing = catalogExerciseByName(ex, 'strength');
+      const sets = [{ reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }];
       db.activeWorkout.exercises.push({
         id: Date.now() + Math.random(),
-        exerciseListingId: catalogExerciseByName(ex, 'strength')?.exercise_listing_id,
+        exerciseListingId: listing?.exercise_listing_id,
         name: ex, type: 'strength', category: 'strength',
-        sets: [{ reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }, { reps: '', weight: '', done: false }]
+        sets: prefillSetsFromHistory(listing?.exercise_listing_id, ex, sets)
       });
     });
     save();
@@ -1615,24 +1674,54 @@ function renderLog() {
   }
 }
 
-// Returns the last logged {weight, reps} for a given exercise name + set index
-// from completed workouts only (never the active session).
-function getSetSuggestion(exerciseName, setIndex) {
-  // Walk completed workouts newest-first
-  for (let i = db.workouts.length - 1; i >= 0; i--) {
-    const w = db.workouts[i];
-    const match = (w.exercises || []).find(ex =>
-      ex.type === 'strength' && ex.name === exerciseName
+function getSetSuggestion(exerciseListingId, exerciseName, setNumber, isWarmup = false) {
+  const workouts = [...db.workouts].sort((a, b) => Number(b.startTime) - Number(a.startTime));
+  for (const workout of workouts) {
+    const exercise = (workout.exercises || []).find(item =>
+      item.type === 'strength' &&
+      (exerciseListingId
+        ? item.exerciseListingId === exerciseListingId ||
+          (!item.exerciseListingId && item.name === exerciseName)
+        : item.name === exerciseName)
     );
-    if (match && match.sets) {
-      const s = match.sets.find(set => set.setNumber === setIndex + 1)
-        || (match.sets.every(set => set.setNumber == null) ? match.sets[setIndex] : null);
-      if (!s) continue;
-      // Only suggest if at least one value was recorded
-      if (s.done && (s.weight || s.reps)) return { weight: s.weight || '', reps: s.reps || '' };
+    if (!exercise) continue;
+
+    const sets = (exercise.sets || [])
+      .map((set, index) => ({ set, index }))
+      .sort((a, b) =>
+        (Number(a.set.setNumber) || a.index + 1) -
+        (Number(b.set.setNumber) || b.index + 1)
+      )
+      .filter(({ set }) => !!set.isWarmup === isWarmup);
+    const set = sets[setNumber - 1]?.set;
+    if (set?.done === true && (set.weight != null || set.reps != null)) {
+      return {
+        weight: set.weight == null ? '' : String(set.weight),
+        reps: set.reps == null ? '' : String(set.reps)
+      };
     }
   }
   return null;
+}
+
+function prefillSetsFromHistory(exerciseListingId, exerciseName, sets, overrideExisting = false) {
+  let workingSetNumber = 0;
+  let warmupSetNumber = 0;
+  return sets.map(set => {
+    const isWarmup = !!set.isWarmup;
+    const setNumber = isWarmup ? ++warmupSetNumber : ++workingSetNumber;
+    const suggestion = getSetSuggestion(exerciseListingId, exerciseName, setNumber, isWarmup);
+    if (!suggestion) return set;
+    return {
+      ...set,
+      weight: overrideExisting || set.weight == null || set.weight === ''
+        ? suggestion.weight || set.weight || ''
+        : set.weight,
+      reps: overrideExisting || set.reps == null || set.reps === ''
+        ? suggestion.reps || set.reps || ''
+        : set.reps
+    };
+  });
 }
 
 function renderExercises() {
@@ -1675,16 +1764,12 @@ function renderExercises() {
       </div>
       <div class="sets-header"><span>#</span><span>Weight (kg)</span><span>Reps</span><span>✓</span></div>
       ${ex.sets.map((s, si) => {
-        const sug = (!s.weight && !s.reps && !s.isWarmup) ? getSetSuggestion(ex.name, si) : null;
-        const wPh = sug && sug.weight ? sug.weight : '0';
-        const rPh = sug && sug.reps  ? sug.reps  : '0';
-        const hasSug = sug && (sug.weight || sug.reps);
         const isWarmup = !!s.isWarmup;
         return `
         <div class="set-row" style="${isWarmup ? 'opacity:0.6' : ''}">
           <div class="set-num" style="${isWarmup ? 'color:var(--info);font-size:9px' : ''}">${isWarmup ? 'W/U' : si + 1 - ex.sets.slice(0, si).filter(x => x.isWarmup).length}</div>
-          <input type="number" value="${s.weight}" placeholder="${isWarmup ? '~60%' : wPh}" min="0" onchange="updateSet(${ei},${si},'weight',this.value)" step="0.5" class="${hasSug&&!s.weight&&!isWarmup?'has-sug':''}">
-          <input type="number" value="${s.reps}"   placeholder="${isWarmup ? 'reps' : rPh}" min="0" step="1" onchange="updateSet(${ei},${si},'reps',this.value)"   class="${hasSug&&!s.reps&&!isWarmup?'has-sug':''}">
+          <input type="number" value="${s.weight}" placeholder="${isWarmup ? '~60%' : '0'}" min="0" onchange="updateSet(${ei},${si},'weight',this.value)" step="0.5">
+          <input type="number" value="${s.reps}"   placeholder="${isWarmup ? 'reps' : '0'}" min="0" step="1" onchange="updateSet(${ei},${si},'reps',this.value)">
           <div class="set-done ${s.done?'checked':''}" onclick="toggleSet(${ei},${si})">${s.done?'✓':''}</div>
         </div>`;
       }).join('')}
@@ -1735,6 +1820,9 @@ function updateCardio(ei, field, val) {
 function addExerciseModal() {
   currentExType = 'strength';
   currentExCategory = 'strength';
+  currentExMuscleFilter = '';
+  currentExSearch = '';
+  document.getElementById('ex-search').value = '';
   document.querySelectorAll('#exercise-category-pills .type-pill').forEach(p =>
     p.classList.toggle('selected', p.dataset.category === currentExCategory)
   );
@@ -1757,27 +1845,153 @@ function selectExCategory(category, el) {
   document.getElementById('ex-cardio-fields').style.display = currentExType === 'cardio' ? 'block' : 'none';
 }
 
+function selectExMuscleFilter(muscle) {
+  currentExMuscleFilter = muscle;
+  updateExSelect(document.getElementById('ex-select').value);
+}
+
+function searchExExercises(query) {
+  currentExSearch = query.trim().toLocaleLowerCase();
+  updateExSelect(document.getElementById('ex-select').value, true);
+}
+
+function exerciseMatchesSearch(exercise, query) {
+  if (!query) return true;
+  return [exercise.name, ...(exercise.synonyms || [])]
+    .some(value => String(value || '').toLocaleLowerCase().includes(query));
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
 }
 
-function updateExSelect(selectedId) {
+function toggleExercisePicker(prefix, open) {
+  const picker = document.getElementById(`${prefix}-picker`);
+  const trigger = document.getElementById(`${prefix}-picker-trigger`);
+  const menu = document.getElementById(`${prefix}-picker-menu`);
+  const shouldOpen = open == null ? menu.hidden : open;
+  menu.hidden = !shouldOpen;
+  picker.classList.toggle('open', shouldOpen);
+  trigger.setAttribute('aria-expanded', String(shouldOpen));
+  if (shouldOpen) {
+    const search = document.getElementById(`${prefix}-search`);
+    search.focus();
+    search.select();
+  }
+}
+
+function chooseExerciseOption(prefix, exerciseId) {
+  const select = document.getElementById(prefix === 'ex' ? 'ex-select' : 'plan-ex-select');
+  if (![...select.options].some(option => option.value === exerciseId)) return;
+  select.value = exerciseId;
+  toggleExercisePicker(prefix, false);
+  if (prefix === 'ex') {
+    currentExSearch = '';
+    document.getElementById('ex-search').value = '';
+    updateExSelect(exerciseId);
+  } else {
+    planExSearch = '';
+    document.getElementById('plan-ex-search').value = '';
+    updatePlanExSelect(exerciseId);
+    refreshPlanExSets();
+  }
+}
+
+function handleExercisePickerKeydown(prefix, event) {
+  const options = [...document.getElementById(`${prefix}-picker-options`)
+    .querySelectorAll('.exercise-picker-option')];
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    toggleExercisePicker(prefix, false);
+    document.getElementById(`${prefix}-picker-trigger`).focus();
+    return;
+  }
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return;
+  event.preventDefault();
+  const currentIndex = options.indexOf(document.activeElement);
+  if (event.key === 'Enter') {
+    if (currentIndex >= 0) chooseExerciseOption(prefix, options[currentIndex].dataset.exerciseId);
+    return;
+  }
+  const direction = event.key === 'ArrowDown' ? 1 : -1;
+  const nextIndex = currentIndex < 0
+    ? (direction > 0 ? 0 : options.length - 1)
+    : Math.max(0, Math.min(options.length - 1, currentIndex + direction));
+  options[nextIndex]?.focus();
+}
+
+function renderExercisePicker(prefix, entries, selectedId, message) {
+  const selectId = prefix === 'ex' ? 'ex-select' : 'plan-ex-select';
+  const select = document.getElementById(selectId);
+  const options = document.getElementById(`${prefix}-picker-options`);
+  const triggerValue = document.getElementById(`${prefix}-picker-value`);
+  const current = selectedId ? catalogExerciseById(selectedId) : null;
+  select.innerHTML = entries.map(ex =>
+    `<option value="${escapeHtml(ex.exercise_listing_id)}">${escapeHtml(ex.name)}</option>`
+  ).join('');
+  if (current && !entries.some(ex => ex.exercise_listing_id === selectedId)) {
+    select.insertAdjacentHTML('beforeend',
+      `<option value="${escapeHtml(current.exercise_listing_id)}">${escapeHtml(current.name)}</option>`);
+  }
+  select.value = selectedId || '';
+  triggerValue.textContent = current?.name || 'Select exercise';
+  options.innerHTML = entries.length
+    ? entries.map(ex => `<button type="button" class="exercise-picker-option" role="option" aria-selected="${ex.exercise_listing_id === selectedId}" data-exercise-id="${escapeHtml(ex.exercise_listing_id)}" onclick="chooseExerciseOption('${prefix}',this.dataset.exerciseId)" onkeydown="handleExercisePickerKeydown('${prefix}',event)">${escapeHtml(ex.name)}</button>`).join('')
+    : `<div class="exercise-picker-empty">${escapeHtml(message || 'No exercises match your search')}</div>`;
+}
+
+document.addEventListener('click', event => {
+  document.querySelectorAll('.exercise-picker.open').forEach(picker => {
+    if (!picker.contains(event.target)) {
+      const prefix = picker.id === 'ex-picker' ? 'ex' : 'plan-ex';
+      toggleExercisePicker(prefix, false);
+    }
+  });
+});
+
+function updateExMuscleFilter() {
+  const filter = document.getElementById('ex-muscle-filter');
+  const select = document.getElementById('ex-muscle-select');
+  const isCardio = currentExType === 'cardio';
+  filter.style.display = isCardio ? 'none' : '';
+  if (isCardio) return;
+
+  const entries = exerciseCategoryEntries(currentExType, currentExCategory);
+  const muscles = muscleGroupsForExercises(entries);
+  if (!muscles.includes(currentExMuscleFilter)) currentExMuscleFilter = '';
+  select.innerHTML = '<option value="">All muscle groups</option>' +
+    muscles.map(muscle => `<option value="${escapeHtml(muscle)}">${escapeHtml(muscle)}</option>`).join('');
+  select.value = currentExMuscleFilter;
+}
+
+function muscleGroupsForExercises(entries) {
+  return [...new Set(entries.flatMap(ex =>
+    exerciseMuscleMap[ex.exercise_listing_id] || []
+  ))].sort((a, b) => a.localeCompare(b));
+}
+
+function updateExSelect(selectedId, preserveSelection) {
   const select = document.getElementById('ex-select');
-  const entries = exerciseCategoryEntries(currentExType, currentExCategory, selectedId);
+  updateExMuscleFilter();
+  const entries = exerciseCategoryEntries(currentExType, currentExCategory, selectedId)
+    .filter(ex => currentExType === 'cardio' || !currentExMuscleFilter ||
+      (exerciseMuscleMap[ex.exercise_listing_id] || []).includes(currentExMuscleFilter))
+    .filter(ex => exerciseMatchesSearch(ex, currentExSearch));
   if (catalogLoading) {
-    select.innerHTML = '<option value="">Loading exercises…</option>';
+    renderExercisePicker('ex', [], '', 'Loading exercises…');
     return;
   }
   if (catalogError && !entries.length) {
-    select.innerHTML = '<option value="">Exercise catalog unavailable</option>';
+    renderExercisePicker('ex', [], '', 'Exercise catalog unavailable');
     return;
   }
-  select.innerHTML = entries.length
-    ? entries.map(ex => `<option value="${ex.exercise_listing_id}">${escapeHtml(ex.name)}</option>`).join('')
-    : '<option value="">No exercises available</option>';
-  if (selectedId && entries.some(ex => ex.exercise_listing_id === selectedId)) select.value = selectedId;
+  const requestedId = selectedId || select.value;
+  const activeId = entries.some(ex => ex.exercise_listing_id === requestedId)
+    ? requestedId
+    : preserveSelection ? requestedId : entries[0]?.exercise_listing_id || '';
+  renderExercisePicker('ex', entries, activeId);
 }
 
 async function addExercise() {
@@ -1794,11 +2008,12 @@ async function addExercise() {
       name, currentExType, custom ? null : selected?.exercise_listing_id, currentExCategory
     );
     if (currentExType === 'strength') {
-      const sets = parseInt(document.getElementById('ex-sets').value, 10) || 3;
+      const setCount = parseInt(document.getElementById('ex-sets').value, 10) || 3;
+      const sets = Array.from({length:setCount}, () => ({ reps:'', weight:'', done: false }));
       db.activeWorkout.exercises.push({
         id: Date.now(), exerciseListingId: listing.exercise_listing_id,
         name: listing.name, type: 'strength', category: listing.category || currentExCategory,
-        sets: Array.from({length:sets}, () => ({ reps:'', weight:'', done: false }))
+        sets: prefillSetsFromHistory(listing.exercise_listing_id, listing.name, sets)
       });
     } else {
       db.activeWorkout.exercises.push({
@@ -2630,6 +2845,8 @@ let editingSetConfigs = []; // [{ mode:'reps'|'pct', repsMin, repsMax, pct1rm }]
 let editingExIdx = null;    // null = new, number = editing existing
 let planExCategory = 'strength';
 let planExType = 'strength';
+let planExMuscleFilter = '';
+let planExSearch = '';
 
 // Epley formula helpers
 function calc1RM(weight, reps) { return reps === 1 ? weight : Math.round(weight * (1 + reps / 30)); }
@@ -2649,6 +2866,9 @@ function openPlanExerciseAdder(editIdx) {
     : null;
   planExCategory = existing?.category || existingListing?.category || existing?.type || 'strength';
   planExType = exerciseTypeForCategory(planExCategory);
+  planExMuscleFilter = '';
+  planExSearch = '';
+  document.getElementById('plan-ex-search').value = '';
 
   document.getElementById('plan-ex-modal-title').textContent = existing ? 'Edit Exercise' : 'Add Exercise';
   const indicator = document.getElementById('plan-ex-edit-indicator');
@@ -2816,21 +3036,48 @@ function selectPlanExCategory(category, el) {
   refreshPlanExSets();
 }
 
-function updatePlanExSelect(selectedId) {
+function selectPlanExMuscleFilter(muscle) {
+  planExMuscleFilter = muscle;
+  updatePlanExSelect(document.getElementById('plan-ex-select').value);
+  refreshPlanExSets();
+}
+
+function searchPlanExExercises(query) {
+  planExSearch = query.trim().toLocaleLowerCase();
+  updatePlanExSelect(document.getElementById('plan-ex-select').value, true);
+  refreshPlanExSets();
+}
+
+function updatePlanExSelect(selectedId, preserveSelection) {
   const select = document.getElementById('plan-ex-select');
-  const entries = exerciseCategoryEntries(planExType, planExCategory, selectedId);
+  const filter = document.getElementById('plan-ex-muscle-filter');
+  const muscleSelect = document.getElementById('plan-ex-muscle-select');
+  const isCardio = planExType === 'cardio';
+  filter.style.display = isCardio ? 'none' : '';
+  const categoryEntries = exerciseCategoryEntries(planExType, planExCategory, selectedId);
+  if (!isCardio) {
+    const muscles = muscleGroupsForExercises(categoryEntries);
+    if (!muscles.includes(planExMuscleFilter)) planExMuscleFilter = '';
+    muscleSelect.innerHTML = '<option value="">All muscle groups</option>' +
+      muscles.map(muscle => `<option value="${escapeHtml(muscle)}">${escapeHtml(muscle)}</option>`).join('');
+    muscleSelect.value = planExMuscleFilter;
+  }
+  const entries = categoryEntries.filter(ex => isCardio || !planExMuscleFilter ||
+    (exerciseMuscleMap[ex.exercise_listing_id] || []).includes(planExMuscleFilter))
+    .filter(ex => exerciseMatchesSearch(ex, planExSearch));
   if (catalogLoading) {
-    select.innerHTML = '<option value="">Loading exercises…</option>';
+    renderExercisePicker('plan-ex', [], '', 'Loading exercises…');
     return;
   }
   if (catalogError && !entries.length) {
-    select.innerHTML = '<option value="">Exercise catalog unavailable</option>';
+    renderExercisePicker('plan-ex', [], '', 'Exercise catalog unavailable');
     return;
   }
-  select.innerHTML = entries.length
-    ? entries.map(ex => `<option value="${ex.exercise_listing_id}">${escapeHtml(ex.name)}</option>`).join('')
-    : '<option value="">No exercises available</option>';
-  if (selectedId && entries.some(ex => ex.exercise_listing_id === selectedId)) select.value = selectedId;
+  const requestedId = selectedId || select.value;
+  const activeId = entries.some(ex => ex.exercise_listing_id === requestedId)
+    ? requestedId
+    : preserveSelection ? requestedId : entries[0]?.exercise_listing_id || '';
+  renderExercisePicker('plan-ex', entries, activeId);
 }
 
 // ── DRAG TO REORDER ────────────────────────────────────────────────────
@@ -2874,6 +3121,7 @@ function startPlanWorkout(planId, workoutId) {
         const oneRM = getLatest1RM(ex.name);
         const configs = ex.setConfigs || [];
         const warmupCount = ex.warmupSets || 0;
+        const exerciseListingId = listing?.exercise_listing_id || ex.exerciseListingId;
         const warmupLogSets = Array.from({ length: warmupCount }, () => ({
           reps: '', weight: '', done: false, isWarmup: true
         }));
@@ -2890,10 +3138,15 @@ function startPlanWorkout(planId, workoutId) {
         });
         const sets = [...warmupLogSets, ...workingSets];
         // Fallback if no setConfigs (legacy)
-        const finalSets = sets.length ? sets : Array.from({ length: ex.sets || 3 }, () => ({ reps: '', weight: '', done: false }));
+        const finalSets = prefillSetsFromHistory(
+          exerciseListingId,
+          ex.name,
+          sets.length ? sets : Array.from({ length: ex.sets || 3 }, () => ({ reps: '', weight: '', done: false })),
+          true
+        );
         db.activeWorkout.exercises.push({
           id: Date.now() + Math.random(),
-          exerciseListingId: listing?.exercise_listing_id || ex.exerciseListingId,
+          exerciseListingId,
           name: ex.name, type: 'strength', category, sets: finalSets
         });
       }
