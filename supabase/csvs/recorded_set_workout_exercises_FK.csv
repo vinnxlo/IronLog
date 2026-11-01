@@ -1,0 +1,16 @@
+table_name,column_name,referenced_table,referenced_column
+recorded_sets,date_key,date_dimension,date_key
+recorded_sets,exercise_listing_id,exercise_listing,exercise_listing_id
+recorded_sets,owner,workouts,id
+recorded_sets,owner,workout_exercises,workout_exercise_id
+recorded_sets,owner,workout_exercises,owner
+recorded_sets,owner,workouts,user_id
+recorded_sets,workout_exercise_id,workout_exercises,workout_exercise_id
+recorded_sets,workout_exercise_id,workout_exercises,owner
+recorded_sets,workout_id,workouts,user_id
+recorded_sets,workout_id,workouts,id
+workout_exercises,exercise_listing_id,exercise_listing,exercise_listing_id
+workout_exercises,owner,workouts,id
+workout_exercises,owner,workouts,user_id
+workout_exercises,workout_id,workouts,id
+workout_exercises,workout_id,workouts,user_id

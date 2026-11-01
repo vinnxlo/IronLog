@@ -1120,6 +1120,123 @@ function save() {
   try { localStorage.setItem(userStorageKey(currentUser.id), JSON.stringify(db)); } catch(e){}
 }
 
+async function loadPlansFromCloud(userId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Supabase is unavailable.');
+
+  const localPlans = Array.isArray(db.plans) ? db.plans : [];
+  if (localPlans.length) {
+    const { error } = await client.rpc('import_user_workout_plans', {
+      p_plans: localPlans.map((plan, index) => ({ ...plan, plan_order: index }))
+    });
+    if (error) throw error;
+  }
+  if (currentUser?.id !== userId) return;
+
+  const { error: seedError } = await client.rpc('ensure_user_bts_workout_plan');
+  if (seedError) throw seedError;
+
+  const [planResult, workoutResult, exerciseResult] = await Promise.all([
+    client.from('workout_plans')
+      .select('id,name,plan_order')
+      .eq('user_id', userId)
+      .order('plan_order', { ascending: true })
+      .order('updated_at', { ascending: true }),
+    client.from('plan_workouts')
+      .select('id,plan_id,name,workout_order')
+      .eq('user_id', userId)
+      .order('workout_order', { ascending: true }),
+    client.from('plan_exercises')
+      .select('plan_id,plan_workout_id,exercise_listing_id,exercise_order,prescription,exercise_listing(name,exercise_type,category)')
+      .eq('user_id', userId)
+      .order('exercise_order', { ascending: true })
+  ]);
+  if (planResult.error) throw planResult.error;
+  if (workoutResult.error) throw workoutResult.error;
+  if (exerciseResult.error) throw exerciseResult.error;
+  if (currentUser?.id !== userId) return;
+
+  const exercisesByWorkout = new Map();
+  (exerciseResult.data || []).forEach(row => {
+    const listing = Array.isArray(row.exercise_listing)
+      ? row.exercise_listing[0]
+      : row.exercise_listing;
+    if (!listing) {
+      throw new Error(`Exercise catalog entry ${row.exercise_listing_id} is missing.`);
+    }
+    const key = `${row.plan_id}:${row.plan_workout_id}`;
+    if (!exercisesByWorkout.has(key)) exercisesByWorkout.set(key, []);
+    exercisesByWorkout.get(key).push({
+      ...(row.prescription || {}),
+      exerciseListingId: row.exercise_listing_id,
+      name: listing.name,
+      type: listing.exercise_type,
+      category: listing.category || listing.exercise_type
+    });
+  });
+
+  const workoutsByPlan = new Map();
+  (workoutResult.data || []).forEach(row => {
+    const key = `${row.plan_id}:${row.id}`;
+    const exerciseRows = exercisesByWorkout.get(key) || [];
+    if (!workoutsByPlan.has(row.plan_id)) workoutsByPlan.set(row.plan_id, []);
+    workoutsByPlan.get(row.plan_id).push({
+      id: row.id,
+      name: row.name,
+      exercises: exerciseRows
+    });
+  });
+
+  db.plans = (planResult.data || []).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    workouts: workoutsByPlan.get(plan.id) || []
+  }));
+  save();
+}
+
+async function persistPlansToCloud() {
+  if (!currentUser) throw new Error('Log in before saving workout plans.');
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Supabase is unavailable.');
+  const userId = currentUser.id;
+  const plans = db.plans.map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    workouts: (plan.workouts || []).map(workout => ({
+      id: workout.id,
+      name: workout.name,
+      exercises: (workout.exercises || []).map(exercise => ({
+        ...exercise,
+        exerciseListingId: exercise.exerciseListingId || null
+      }))
+    }))
+  }));
+  const { error } = await client.rpc('save_user_workout_plans', { p_plans: plans });
+  if (error) throw error;
+  if (currentUser?.id !== userId) throw new Error('Account changed while saving plans. Try again.');
+}
+
+async function finishPlanChange(previousPlans, successMessage) {
+  const userId = currentUser?.id;
+  try {
+    await persistPlansToCloud();
+    save();
+    renderPlans();
+    showToast(successMessage);
+    return true;
+  } catch (error) {
+    console.error('Could not save workout plans:', error);
+    if (currentUser?.id === userId) {
+      db.plans = previousPlans;
+      save();
+      renderPlans();
+    }
+    showToast(`Could not save plans: ${error.message || 'Please try again'}`);
+    return false;
+  }
+}
+
 function showAuthMessage(message) {
   const element = document.getElementById('auth-message');
   element.textContent = message || '';
@@ -1166,7 +1283,14 @@ async function applyAuthSession(user) {
   updatePRs();
 
   authReady = true;
-  seedBTSPlan();
+  try {
+    await loadPlansFromCloud(currentUser.id);
+  } catch (error) {
+    if (currentUser?.id !== user.id) return;
+    console.error('Could not load workout plans from Supabase:', error);
+    showToast(`Workout plans failed to load: ${error.message || 'Please try again'}`);
+  }
+  if (currentUser?.id !== user.id) return;
   renderAccountControls();
   closeModal('auth-modal');
   renderHome();
@@ -1295,6 +1419,7 @@ async function fetchWorkoutsFromCloud() {
     db.workouts = (workoutResult.data || []).map(workout => ({
       id: String(workout.id),
       name: workout.name,
+      planWorkoutId: workout.plan_workout_id || null,
       startTime: workout.start_time,
       endTime: workout.end_time,
       duration: workout.duration,
@@ -1585,15 +1710,23 @@ async function finishWorkout() {
       end_time: endTime,
       duration
     };
-    const { data: savedId, error } = await client.rpc('save_completed_workout', {
-      p_workout: workoutPayload,
-      p_exercises: completedExercises
-    });
+    const saveCall = db.activeWorkout.planWorkoutId
+      ? client.rpc('save_completed_workout_with_plan_id', {
+        p_workout: workoutPayload,
+        p_exercises: completedExercises,
+        p_plan_workout_id: db.activeWorkout.planWorkoutId
+      })
+      : client.rpc('save_completed_workout', {
+        p_workout: workoutPayload,
+        p_exercises: completedExercises
+      });
+    const { data: savedId, error } = await saveCall;
     if (error) throw error;
 
     const workout = {
       id: String(savedId || db.activeWorkout.id),
       name: db.activeWorkout.name,
+      planWorkoutId: db.activeWorkout.planWorkoutId || null,
       startTime: db.activeWorkout.startTime,
       endTime,
       duration,
@@ -2716,21 +2849,22 @@ function plansAddAction() {
   openModal('plan-modal');
 }
 
-function savePlan() {
+async function savePlan() {
   const name = document.getElementById('plan-name-input').value.trim();
   if (!name) { showToast('Enter a plan name'); return; }
   if (!db.plans) db.plans = [];
+  const previousPlans = JSON.parse(JSON.stringify(db.plans));
   const editId = document.getElementById('plan-modal').dataset.editId;
   if (editId) {
     const plan = db.plans.find(p => p.id === editId);
     if (plan) plan.name = name;
-    delete document.getElementById('plan-modal').dataset.editId;
-    showToast('Plan renamed');
   } else {
     db.plans.push({ id: 'plan_' + Date.now(), name, workouts: [] });
-    showToast('Plan created');
   }
-  save(); closeModal('plan-modal'); renderPlans();
+  if (await finishPlanChange(previousPlans, editId ? 'Plan renamed' : 'Plan created')) {
+    delete document.getElementById('plan-modal').dataset.editId;
+    closeModal('plan-modal');
+  }
 }
 
 function openRenamePlan(planId) {
@@ -2743,17 +2877,19 @@ function openRenamePlan(planId) {
 }
 
 function deletePlan(planId) {
-  showConfirm('Delete Plan?', 'This will delete the plan and all its workouts.', () => {
+  showConfirm('Delete Plan?', 'This will delete the plan and all its workouts.', async () => {
+    const previousPlans = JSON.parse(JSON.stringify(db.plans));
     db.plans = db.plans.filter(p => p.id !== planId);
-    save(); renderPlans(); showToast('Plan deleted');
+    await finishPlanChange(previousPlans, 'Plan deleted');
   });
 }
 
 function deletePlanWorkout(planId, workoutId) {
-  showConfirm('Delete Workout?', 'Remove this workout from the plan?', () => {
+  showConfirm('Delete Workout?', 'Remove this workout from the plan?', async () => {
+    const previousPlans = JSON.parse(JSON.stringify(db.plans));
     const plan = db.plans.find(p => p.id === planId);
     if (plan) plan.workouts = plan.workouts.filter(w => w.id !== workoutId);
-    save(); renderPlans(); showToast('Workout removed');
+    await finishPlanChange(previousPlans, 'Workout removed');
   });
 }
 
@@ -2824,11 +2960,12 @@ function renderPlanExerciseList() {
   }).join('');
 }
 
-function savePlanWorkout() {
+async function savePlanWorkout() {
   const name = document.getElementById('plan-workout-name-input').value.trim();
   if (!name) { showToast('Enter a workout name'); return; }
   const plan = db.plans.find(p => p.id === plansState.planId);
   if (!plan) return;
+  const previousPlans = JSON.parse(JSON.stringify(db.plans));
   if (!plan.workouts) plan.workouts = [];
   if (plansState.workoutId) {
     const idx = plan.workouts.findIndex(w => w.id === plansState.workoutId);
@@ -2836,7 +2973,9 @@ function savePlanWorkout() {
   } else {
     plan.workouts.push({ id: 'wk_' + Date.now(), name, exercises: [...editingPlanWorkout] });
   }
-  save(); closeModal('plan-workout-modal'); renderPlans(); showToast('Workout saved');
+  if (await finishPlanChange(previousPlans, 'Workout saved')) {
+    closeModal('plan-workout-modal');
+  }
 }
 
 // ── PLAN EXERCISE ADDER ────────────────────────────────────────────────
@@ -3103,17 +3242,26 @@ function startPlanWorkout(planId, workoutId) {
   const plan = db.plans.find(p => p.id === planId);
   const wk   = plan && (plan.workouts||[]).find(w => w.id === workoutId);
   if (!wk) return;
+  const resolvedExercises = (wk.exercises || []).map(ex => ({
+    exercise: ex,
+    listing: ex.exerciseListingId ? catalogExerciseById(ex.exerciseListingId) : null
+  }));
+  const missingExercise = resolvedExercises.find(({ exercise, listing }) =>
+    !listing || listing.exercise_type !== exercise.type
+  );
+  if (missingExercise) {
+    showToast(`Plan exercise "${missingExercise.exercise.name}" has no valid catalog entry. Edit the plan and select it again.`);
+    return;
+  }
   const doStart = () => {
     createWorkout(wk.name);
-    wk.exercises.forEach(ex => {
-      const listing = ex.exerciseListingId
-        ? catalogExerciseById(ex.exerciseListingId)
-        : catalogExerciseByName(ex.name, ex.type);
+    db.activeWorkout.planWorkoutId = wk.id;
+    resolvedExercises.forEach(({ exercise: ex, listing }) => {
       const category = ex.category || listing?.category || ex.type || 'strength';
       if (ex.type === 'cardio') {
         db.activeWorkout.exercises.push({
           id: Date.now() + Math.random(),
-          exerciseListingId: listing?.exercise_listing_id || ex.exerciseListingId,
+          exerciseListingId: listing.exercise_listing_id,
           name: ex.name, type: 'cardio', category, completed: false,
           duration: String(ex.duration||''), distance: '', calories: ''
         });
@@ -3121,7 +3269,7 @@ function startPlanWorkout(planId, workoutId) {
         const oneRM = getLatest1RM(ex.name);
         const configs = ex.setConfigs || [];
         const warmupCount = ex.warmupSets || 0;
-        const exerciseListingId = listing?.exercise_listing_id || ex.exerciseListingId;
+        const exerciseListingId = listing.exercise_listing_id;
         const warmupLogSets = Array.from({ length: warmupCount }, () => ({
           reps: '', weight: '', done: false, isWarmup: true
         }));
@@ -3221,97 +3369,6 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     if (e.target === m && m.id !== 'auth-modal') m.classList.remove('show');
   });
 });
-
-// ── BTS PLAN SEEDING ──────────────────────────────────────────────────
-// Seeds the Bodybuilding Transformation System (Week 1 Foundation Block)
-// only if the plan doesn't already exist. Safe to call on every load.
-
-function makeSets(reps, count) {
-  return Array.from({ length: count }, () => ({ mode: 'weight', weight: '', reps, pct1rm: 75 }));
-}
-
-function makeEx(name, reps, count, notes) {
-  return { name, type: 'strength', notes: notes || '', warmupSets: 1, setConfigs: makeSets(reps, count) };
-}
-
-function seedBTSPlan() {
-  if (!db.plans) db.plans = [];
-  if (db.plans.some(p => p.id === 'bts_foundation')) return; // already seeded
-
-  const plan = {
-    id: 'bts_foundation',
-    name: 'BTS — Foundation Block',
-    workouts: [
-      {
-        id: 'bts_upper_str',
-        name: 'Upper — Strength',
-        exercises: [
-          makeEx('45° Incline Barbell Press',        7,  2, '1 sec pause at bottom of each rep while maintaining tension on pecs'),
-          makeEx('Cable Crossover',                   9,  2, 'Ladder: one set low cable, one set medium, one set high position'),
-          makeEx('Wide-Grip Pull-Up',                 9,  2, '1.5× shoulder width overhand grip. Slow 2–3 sec negative'),
-          makeEx('High-Cable Lateral Raise',          9,  2, 'Focus on squeezing your lateral delt to move the weight'),
-          makeEx('Pendlay Row',                       7,  2, 'Stand on a bumper plate. Big stretch — touch stomach/chest each rep'),
-          makeEx('Overhead Cable Triceps Extension',  9,  2, 'Optionally pause 0.5–1 sec in the stretched position each rep'),
-          makeEx('Bayesian Cable Curl',               9,  2, 'If left-right imbalance: do one arm at a time, weaker arm first'),
-        ]
-      },
-      {
-        id: 'bts_lower_str',
-        name: 'Lower — Strength',
-        exercises: [
-          makeEx('Lying Leg Curl',     9,  2, 'Set machine for maximum stretch at bottom. Prevent butt from popping up'),
-          makeEx('Smith Machine Squat', 7, 2, 'Feet forward 3–6 inches from normal squat position for more quad focus'),
-          makeEx('Barbell RDL',        7,  2, 'Stop ~75% of the way to lockout — stay in the bottom ¾ of ROM'),
-          makeEx('Leg Extension',      9,  2, 'Grab handles hard to pull butt into seat. 2–3 sec negative'),
-          makeEx('Calf Raises',        7,  2, '1–2 sec pause at bottom. Roll ankle back and forth on balls of feet'),
-          makeEx('Cable Crunch',       9,  2, 'Round lower back as you crunch. Mind-muscle with your abs'),
-        ]
-      },
-      {
-        id: 'bts_pull_hyp',
-        name: 'Pull — Hypertrophy',
-        exercises: [
-          makeEx('Neutral-Grip Lat Pulldown',   9,  2, 'Handle more out in front — cross between pullover and pulldown. Feel the lats'),
-          makeEx('Chest-Supported Machine Row', 9,  2, 'Flare elbows at ~45°. Squeeze shoulder blades together hard at top'),
-          makeEx('Seated Rows',                 11, 2, 'Focus on squeezing shoulder blades, driving elbows down and back'),
-          makeEx('Face Pulls',                  11, 2, 'Pause 1–2 sec in the squeeze. Contract rear delts hard'),
-          makeEx('Machine Shrug',               11, 2, 'Brief pause at top. Think about pulling shoulders up to ears'),
-          makeEx('EZ-Bar Curl',                 11, 2, 'Set cable at lowest position. Constant tension on biceps. Slow, controlled'),
-          makeEx('Bicep Curls',                 13, 1, 'Smooth, controlled reps. Strong mind-muscle connection with the biceps'),
-        ]
-      },
-      {
-        id: 'bts_push_hyp',
-        name: 'Push — Hypertrophy',
-        exercises: [
-          makeEx('Bench Press',                      9,  2, 'Comfortable arch, quick pause on chest, explode up each rep'),
-          makeEx('Machine Shoulder Press',           9,  2, 'Elbows break at least 90°. Mind-muscle with delts. Smooth, controlled'),
-          makeEx('Bottom-Half DB Flye',              11, 2, 'All reps in bottom half of ROM only. Deep stretch in pecs each rep'),
-          makeEx('High-Cable Lateral Raise',         11, 2, 'Focus on squeezing your lateral delt to move the weight'),
-          makeEx('Overhead Cable Triceps Extension', 11, 2, 'Optionally pause 0.5–1 sec in the stretched position each rep'),
-          makeEx('Cable Triceps Kickback',           13, 1, 'Shoulder positioned back behind torso in full squeeze position'),
-          makeEx('Roman Chair Leg Raise',            15, 2, 'Allow lower back to round as you curl legs up. Go until listed RPE'),
-        ]
-      },
-      {
-        id: 'bts_legs_hyp',
-        name: 'Legs — Hypertrophy',
-        exercises: [
-          makeEx('Leg Press',                9,  2, 'Feet lower on platform for quad focus. Deep as possible without back rounding. Pause at bottom'),
-          makeEx('Lying Leg Curl',           11, 2, 'Lean forward over machine for maximum hamstring stretch'),
-          makeEx('DB Bulgarian Split Squat', 9,  2, 'Lower until front thigh is parallel to ground. Drive through front heel'),
-          makeEx('Leg Extension',            11, 2, 'Grab handles to pull butt into seat. 2–3 sec negative. Feel quads pulling apart'),
-          makeEx('Machine Hip Adduction',    11, 2, 'Mind-muscle with inner thighs. Push hard — great for front thigh mass'),
-          makeEx('Machine Hip Abduction',    11, 2, 'Use pads if possible to increase ROM. Lean forward, grab rails to stretch glutes'),
-          makeEx('Calf Raises',              11, 2, '1–2 sec pause at bottom. Roll ankle back and forth on balls of feet'),
-        ]
-      },
-    ]
-  };
-
-  db.plans.unshift(plan); // add at top of plans list
-  save();
-}
 
 // INIT
 renderHome();
