@@ -1120,11 +1120,13 @@ function save() {
   try { localStorage.setItem(userStorageKey(currentUser.id), JSON.stringify(db)); } catch(e){}
 }
 
-async function loadPlansFromCloud(userId) {
+async function loadPlansFromCloud(userId, legacyPlans = []) {
   const client = getSupabaseClient();
   if (!client) throw new Error('Supabase is unavailable.');
 
-  const localPlans = Array.isArray(db.plans) ? db.plans : [];
+  const localPlans = Array.isArray(legacyPlans)
+    ? legacyPlans.filter(plan => plan?.id !== 'bts_foundation')
+    : [];
   if (localPlans.length) {
     const { error } = await client.rpc('import_user_workout_plans', {
       p_plans: localPlans.map((plan, index) => ({ ...plan, plan_order: index }))
@@ -1132,9 +1134,6 @@ async function loadPlansFromCloud(userId) {
     if (error) throw error;
   }
   if (currentUser?.id !== userId) return;
-
-  const { error: seedError } = await client.rpc('ensure_user_bts_workout_plan');
-  if (seedError) throw seedError;
 
   const [planResult, workoutResult, exerciseResult] = await Promise.all([
     client.from('workout_plans')
@@ -1279,12 +1278,14 @@ async function applyAuthSession(user) {
   }
   if (!Array.isArray(db.workouts)) db.workouts = [];
   if (!Array.isArray(db.plans)) db.plans = [];
+  const legacyPlans = db.plans;
+  db.plans = [];
   if (!db.prs || typeof db.prs !== 'object') db.prs = {};
   updatePRs();
 
   authReady = true;
   try {
-    await loadPlansFromCloud(currentUser.id);
+    await loadPlansFromCloud(currentUser.id, legacyPlans);
   } catch (error) {
     if (currentUser?.id !== user.id) return;
     console.error('Could not load workout plans from Supabase:', error);
