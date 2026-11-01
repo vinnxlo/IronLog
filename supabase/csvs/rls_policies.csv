@@ -1,0 +1,8 @@
+tablename,policyname,roles,cmd,qual,with_check
+exercise_listing,Authenticated users read shared and owned exercises,{authenticated},SELECT,((user_id IS NULL) OR (user_id = auth.uid())),null
+exercise_listing,Users create their own exercises,{authenticated},INSERT,null,(user_id = auth.uid())
+exercise_listing,Users delete their own exercises,{authenticated},DELETE,(user_id = auth.uid()),null
+exercise_listing,Users update their own exercises,{authenticated},UPDATE,(user_id = auth.uid()),(user_id = auth.uid())
+recorded_sets,Users access their recorded sets,{authenticated},ALL,(owner = auth.uid()),(owner = auth.uid())
+workout_exercises,Users access their workout exercises,{authenticated},ALL,(owner = auth.uid()),(owner = auth.uid())
+workouts,Users can only access their own workouts,{authenticated},ALL,(auth.uid() = user_id),(auth.uid() = user_id)

@@ -1,0 +1,30 @@
+exercise_listing_id,name,exercise_type,category,is_active,is_shared,replacement_exercise_listing_id
+b847eae4-d24d-4e2f-9562-721f674ad91a,45° Incline Barbell Press,strength,null,FALSE,TRUE,18aede51-071e-59cd-910b-9489cf429579
+0be533f9-8ff5-4afb-8068-8630e866a8a2,Barbell RDL,strength,null,FALSE,TRUE,f6d6005c-ef62-4b18-96e9-d7f00dbc6edf
+99234917-75a6-4e47-aef8-d1ab31213c5c,Bayesian Cable Curl,strength,null,FALSE,TRUE,c2c67465-49d4-54be-90c1-5b28b827188e
+74ace54b-4a66-4bcd-8cfe-bf7200a89535,Bench Press,strength,null,FALSE,TRUE,d7478359-1866-57fe-99e7-ee0729af8ed6
+128bb9b5-35c1-4ff9-8d53-4cff80a1c510,Bicep Curls,strength,null,FALSE,TRUE,7cf5ffeb-acc6-53f4-957e-17dd2763758c
+e822fbcc-fe70-43ff-8b6c-8f0cec17e6a2,Bottom-Half DB Flye,strength,null,FALSE,TRUE,4479c5f8-c5e2-4e04-9b52-a33bd2567a70
+113e0506-e484-4331-a5ba-808e065e9286,Cable Crossover,strength,null,FALSE,TRUE,bbe43faf-34a1-4e5e-b4b4-1ff690a974b3
+0500b4b4-6cbb-4f47-b3e0-ba5267f44894,Cable Crunch,strength,strength,TRUE,TRUE,
+c18e0e04-cb6a-453b-9e01-bd0a55de4a0b,Cable Triceps Kickback,strength,null,FALSE,TRUE,ed37771c-b68a-5922-a2fd-67c24df678d3
+3371ca9f-5a7b-4efc-bb3b-e3bd3f3b9e84,Calf Raises,strength,null,FALSE,TRUE,c7819681-2ea0-5762-ba04-d57ef9d806f4
+5ed15f67-9e2c-4e29-b6c3-616e775dedd4,Chest-Supported Machine Row,strength,strength,TRUE,TRUE,
+b77a89fe-bc95-4246-8b63-c916b2632326,DB Bulgarian Split Squat,strength,null,FALSE,TRUE,489a41e9-467f-5cac-9133-fb763ae489bf
+95b2db37-1d98-48af-8424-12329d143cf0,EZ-Bar Curl,strength,strength,TRUE,TRUE,
+f5c3793e-5a6a-43ff-8114-9eb7d7c6aafe,Face Pulls,strength,null,FALSE,TRUE,bd2e20bf-8574-5a87-b7a4-5d53d904142f
+2261dcc3-115d-48d8-83d9-3e2932c689e3,High-Cable Lateral Raise,strength,null,FALSE,TRUE,ad83b8cd-6803-5568-9d5c-886522873592
+f071a975-f903-49ed-94f0-0ff86f3aa84e,Leg Extension,strength,strength,TRUE,TRUE,
+d8a04e26-c7b9-43f6-9a46-c168ddeb96f2,Leg Press,strength,strength,TRUE,TRUE,
+00453f74-ebb7-4c00-adbb-cb2f480c4931,Lying Leg Curl,strength,strength,TRUE,TRUE,
+2ce5dbac-d6b9-444f-80ba-735047a367c7,Machine Hip Abduction,strength,strength,TRUE,TRUE,
+2e011e2d-9552-45b2-87cc-0e1640cdc3c6,Machine Hip Adduction,strength,null,FALSE,TRUE,10bb0915-ed0d-5b0d-93f0-8c68171772ad
+39266bf8-200b-4cbd-b075-de75bbb5cf9d,Machine Shoulder Press,strength,strength,TRUE,TRUE,
+4cebe700-694b-40c2-bd8a-b18517267322,Machine Shrug,strength,null,FALSE,TRUE,73f403b7-0614-5b02-b7ab-f520e34228e1
+276906d2-3c7c-4c20-ba73-ec37bd1c16bf,Neutral-Grip Lat Pulldown,strength,null,FALSE,TRUE,80721c17-187e-5be3-9bda-c794ed8c8bd7
+b779b8ab-c4c9-4228-8485-64dd5bccb9d9,Overhead Cable Triceps Extension,strength,null,TRUE,TRUE,
+e2e0c7ae-0239-4d4b-99b5-6eb34a71e281,Pendlay Row,strength,strength,TRUE,TRUE,
+f08fea39-12f6-4aeb-a72a-baf924079f74,Roman Chair Leg Raise,strength,null,FALSE,TRUE,b48666e7-6dba-5dfa-9384-f9c4f5dbc0e0
+55fb182a-e9d0-4b32-9eb0-fe35171001cd,Seated Rows,strength,null,FALSE,TRUE,a32e4204-c125-5138-b897-efc66dfc038e
+2a2b8937-c15e-44a5-9a9a-c52540137eda,Smith Machine Squat,strength,strength,TRUE,TRUE,
+90f75860-66de-4b9a-8ea8-7b67cd87082d,Wide-Grip Pull-Up,strength,null,FALSE,TRUE,fcec4a65-9c3a-58ba-bffd-72e294a7b35c
